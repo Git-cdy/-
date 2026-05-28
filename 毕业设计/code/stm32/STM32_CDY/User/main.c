@@ -10,7 +10,7 @@
 
 // ================== 全局变量定义 ==================
 uint8_t Page_Index = 0;   //OLED显示界面 0代表一个界面，目前没有1
-uint8_t Current_Temp = 0;  //温度值
+int8_t Current_Temp = 0;  //温度值（支持负数）
 uint8_t Current_Humi = 0;  //湿度值
 uint8_t System_Status = 0;  // 0: 正常，1: 警告，2: 告警
 uint8_t Control_Mode = 0;   // 0: 自动模式，1: 手动模式
@@ -19,7 +19,8 @@ uint8_t Control_Mode = 0;   // 0: 自动模式，1: 手动模式
 // 执行周期：2000ms（2秒）
 void SHT30_Task(void)
 {
-    uint8_t temp, humi;
+    int8_t temp;
+    uint8_t humi;
     static uint8_t Last_Status = 0; 
 
     // 尝试读取 SHT30 数据
@@ -91,9 +92,17 @@ void OLED_Task(void)
             OLED_ShowString(1, 12, " ==");
 
             // -------- 第二行：温度 : xx C --------
-            OLED_ShowChinese(2, 1, "温度");     
+            OLED_ShowChinese(2, 1, "温度");
             OLED_ShowString(2, 5, " : ");
-            OLED_ShowNum(2, 8, Current_Temp, 2);
+            if (Current_Temp < 0)
+            {
+                OLED_ShowString(2, 8, "-");
+                OLED_ShowNum(2, 9, -Current_Temp, 2);
+            }
+            else
+            {
+                OLED_ShowNum(2, 8, Current_Temp, 2);
+            }
             OLED_ShowString(2, 11, " C  ");   
 
             // -------- 第三行：湿度 : xx % --------

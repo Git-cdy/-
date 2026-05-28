@@ -2,6 +2,28 @@
 #include "sht30.h"
 #include <stdio.h>
 
+// ================== CRC-8 校验函数 ==================
+// SHT30 使用 CRC-8 多项式：x^8 + x^5 + x^4 + 1（0x31）
+static uint8_t SHT30_CRC8(uint8_t *data, uint8_t len)
+{
+    uint8_t crc = 0xFF;
+    uint8_t i, j;
+
+    for (i = 0; i < len; i++)
+    {
+        crc ^= data[i];
+        for (j = 0; j < 8; j++)
+        {
+            if (crc & 0x80)
+                crc = (crc << 1) ^ 0x31;
+            else
+                crc = crc << 1;
+        }
+    }
+
+    return crc;
+}
+
 // ================== I2C1 初始化（PB6/PB7） ==================
 static void I2C1_Init(void)
 {
@@ -139,12 +161,13 @@ void SHT30_Init(void)
 }
 
 // ================== SHT30 读取温湿度 ==================
-uint8_t SHT30_Read_Data(uint8_t *temp, uint8_t *humi)
+uint8_t SHT30_Read_Data(int8_t *temp, uint8_t *humi)
 {
     uint8_t data[6];
     uint32_t timeout = 0;
     uint16_t temp_raw, humi_raw;
-    int temp_val;
+    int16_t temp_val;
+    uint8_t crc_temp, crc_humi;
 
     // 发送起始条件
     I2C_GenerateSTART(SHT30_I2C, ENABLE);
@@ -210,17 +233,33 @@ uint8_t SHT30_Read_Data(uint8_t *temp, uint8_t *humi)
     // 发送停止条件
     I2C_GenerateSTOP(SHT30_I2C, ENABLE);
 
-    // 解析温度和湿度
+    // ========== CRC 校验 ==========
+    // 校验温度数据（data[0] + data[1]）
+    crc_temp = SHT30_CRC8(&data[0], 2);
+    if (crc_temp != data[2])
+    {
+        printf("[SHT30] 温度 CRC 校验失败: 期望 0x%02X, 实际 0x%02X\r\n", data[2], crc_temp);
+        return 0;
+    }
+
+    // 校验湿度数据（data[3] + data[4]）
+    crc_humi = SHT30_CRC8(&data[3], 2);
+    if (crc_humi != data[5])
+    {
+        printf("[SHT30] 湿度 CRC 校验失败: 期望 0x%02X, 实际 0x%02X\r\n", data[5], crc_humi);
+        return 0;
+    }
+
+    // ========== 数据解析 ==========
     temp_raw = (data[0] << 8) | data[1];
     humi_raw = (data[3] << 8) | data[4];
 
     // 温度转换：T = -45 + 175 * (temp_raw / 65535)
-    // 简化为整数：T = (175 * temp_raw) / 65535 - 45
+    // 改用 int16_t 支持负数，然后转换为 int8_t
     temp_val = (175 * temp_raw) / 65535 - 45;
-    *temp = (uint8_t)(temp_val & 0xFF);
+    *temp = (int8_t)temp_val;
 
     // 湿度转换：RH = 100 * (humi_raw / 65535)
-    // 简化为整数：RH = (100 * humi_raw) / 65535
     *humi = (uint8_t)((100 * humi_raw) / 65535);
 
     return 1;

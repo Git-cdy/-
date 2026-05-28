@@ -21,8 +21,10 @@
 #define SHT30_CMD_MEAS_SINGLE  0x2400  // 单次测量（高精度）
 
 // ================== SHT30 初始化与数据读取 ==================
+// temp: 温度（-45~130°C，int8_t 支持负数）
+// humi: 湿度（0~100%RH）
 void SHT30_Init(void);
-uint8_t SHT30_Read_Data(uint8_t *temp, uint8_t *humi);
+uint8_t SHT30_Read_Data(int8_t *temp, uint8_t *humi);
 
 #endif
 
