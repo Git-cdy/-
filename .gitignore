@@ -1,0 +1,127 @@
+# ============================================
+# 智慧大棚项目 .gitignore
+# 原则：只追踪源代码和文档，二进制/编译产物/敏感信息全部排除
+# ============================================
+
+# ---------- Keil µVision 编译产物 ----------
+**/Objects/
+**/Listings/
+**/DebugConfig/
+**/RTE/
+*.uvguix.*
+*.uvopt
+*.crf
+*.d
+*.o
+*.lst
+*.htm
+*.lnp
+*.dep
+*.axf
+*.hex
+*.bin
+*.map
+*.iex
+*.scvd
+JLinkSettings.ini
+JLinkLog.txt
+
+# ---------- STM32 标准外设库（体积大，可重新下载，无修改价值） ----------
+**/Library/CMSIS/
+**/Library/STM32F10x_StdPeriph_Driver/
+**/Library/Startup/
+**/Start/
+
+# ---------- 系统/编辑器临时文件 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+
+# VS Code（保留 settings.json 和 extensions.json，排除其他）
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# JetBrains
+.idea/
+
+# ---------- 大型二进制文档（Word/PPT/PDF/视频/压缩包） ----------
+# 论文最终稿可以单独 git add -f 强制加入
+*.docx
+*.doc
+*.pptx
+*.ppt
+*.xlsx
+*.xls
+*.pdf
+*.mp4
+*.mov
+*.avi
+*.zip
+*.rar
+*.7z
+
+# 例外：项目根目录的 README/CLAUDE 等关键 md 必须保留
+!CLAUDE.md
+!README.md
+!*.md
+
+# ---------- 敏感信息（关键！） ----------
+# 阿里云 IoT 三元组配置
+**/aliyun_config.h
+**/aliyun_config.c
+**/secrets.h
+**/credentials.h
+**/.env
+**/.env.*
+
+# WiFi 配置
+**/wifi_config.h
+
+# 凡是带 _secret / _private 后缀的都不要传
+**/*_secret.*
+**/*_private.*
+
+# ---------- AI 协作产物（已废弃但保留本地） ----------
+.claude-codex/
+.claude-codex.archive/
+
+# ---------- spec-workflow 临时数据 ----------
+.spec-workflow/
+
+# ---------- Claude Code 个人配置 ----------
+.claude/
+
+# ---------- 数据集（K210 训练用，太大，单独管理） ----------
+**/datasets/
+**/dataset/
+**/PlantVillage/
+**/AI_Challenger_2018/
+*.kmodel
+*.tflite
+*.onnx
+*.pt
+*.pth
+*.h5
+
+# ---------- Python（如果将来加训练脚本） ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ---------- 个人/学籍敏感目录 ----------
+# 申报书原稿、学号文件夹整体不传公开仓库
+# 如需私有仓库备份，注释掉下面两行
+大创/202309522230陈德源/
+大创/参考资料/
+互联网+/

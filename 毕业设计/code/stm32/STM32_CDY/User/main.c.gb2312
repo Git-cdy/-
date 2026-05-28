@@ -1,0 +1,351 @@
+#include "stm32f10x.h"
+#include "led.h"
+#include "key.h"
+#include "uart.h"
+#include "scheduler.h"
+#include "adc.h"
+
+// ================== KEY Task ==================
+// Execution period: 20ms
+void KEY_Task(void)
+{
+    uint32_t current_tick = System_Tick;
+    uint8_t  current_level = GPIO_ReadInputDataBit(KEY1_GPIO_PORT, KEY1_GPIO_PIN);
+
+    if (current_level == 1)
+    {
+        if (key_state == 0)
+        {
+            if (current_tick - key_last_time >= KEY_DEBOUNCE_TIME)
+            {
+                key_state     = 1;
+                Key_Down      = 1;
+                key_last_time = current_tick;
+            }
+        }
+    }
+    else
+    {
+        if (key_state == 1)
+        {
+            if (current_tick - key_last_time >= KEY_DEBOUNCE_TIME)
+            {
+                key_state     = 0;
+                key_last_time = current_tick;
+            }
+        }
+    }
+
+    if (Key_Down == 1)
+    {
+        Key_Down = 0;
+        Key_Press_Count++;
+
+        if (Key_Press_Count >= 14)
+        {
+            Key_Press_Count = 0;
+        }
+
+        printf(": %d  --  ", Key_Press_Count);
+        if      (Key_Press_Count == 0) printf("\r\n");
+        else if (Key_Press_Count <= 3) printf("LED1 \r\n");
+        else if (Key_Press_Count <= 6) printf("LED1 \r\n");
+        else if (Key_Press_Count <= 9) printf("LED \r\n");
+        else if (Key_Press_Count == 10) printf("LED1 \r\n");
+        else if (Key_Press_Count == 11) printf("LED \r\n");
+        else if (Key_Press_Count == 12) printf("LED §¹\r\n");
+        else if (Key_Press_Count == 13) printf(" ADC \r\n");
+    }
+}
+
+// ================== LED Display Task ==================
+// Execution period: 10ms
+void LED_Task(void)
+{
+    static uint32_t blink_timer = 0;
+    static uint32_t flow_timer  = 0;
+    static uint8_t  flow_index  = 0;
+
+    static uint8_t last_mode = 255;
+
+    if (last_mode != Key_Press_Count)
+    {
+        last_mode = Key_Press_Count;
+
+        LED_AllOff();
+        blink_timer = 50;
+        flow_timer = 50;
+        flow_index = 0;
+    }
+
+    switch (Key_Press_Count)
+    {
+        case 0:
+            break;
+
+        case 1: case 2: case 3:
+            LED2_On();
+            break;
+
+        case 4: case 5: case 6:
+            blink_timer++;
+            if (blink_timer >= 50)
+            {
+                blink_timer = 0;
+                LED1_Toggle();
+            }
+            break;
+
+        case 7: case 8: case 9:
+            flow_timer++;
+            if (flow_timer >= 50)
+            {
+                flow_timer = 0;
+                LED_AllOff();
+
+                switch (flow_index)
+                {
+                    case 0: LED1_On(); break;
+                    case 1: LED2_On(); break;
+                    case 2: LED3_On(); break;
+                }
+                flow_index = (flow_index + 1) % 3;
+            }
+            break;
+
+        case 10: case 11: case 12: case 13:
+            break;
+
+        default:
+            Key_Press_Count = 0;
+            break;
+    }
+}
+
+// ================== Duty Cycle Calculation ==================
+static uint8_t Get_Duty_From_Phase(uint8_t phase)
+{
+    if (phase < 16) return phase;
+    if (phase < 32) return 31 - phase;
+    return 0;
+}
+
+// ================== LED Breathing Task ==================
+// Execution period: 1ms
+void LED_Breath_Task(void)
+{
+    static uint8_t pwm_count = 0;
+    static uint8_t speed_timer = 0;
+
+    static uint8_t duty_cycle = 0;
+    static uint8_t breath_dir = 1;
+    static uint8_t breath_flow_index = 0;
+
+    static uint8_t master_phase = 0;
+
+    static uint8_t last_breath_mode = 255;
+
+    if (Key_Press_Count >= 10 && Key_Press_Count <= 12)
+    {
+        if (last_breath_mode != Key_Press_Count)
+        {
+            last_breath_mode = Key_Press_Count;
+            LED_AllOff();
+            pwm_count = 0;
+            speed_timer = 0;
+            duty_cycle = 0;
+            breath_dir = 1;
+            breath_flow_index = 0;
+            master_phase = 0;
+        }
+
+        pwm_count++;
+        if (pwm_count >= 16) pwm_count = 0;
+
+        if (Key_Press_Count == 10 || Key_Press_Count == 11)
+        {
+            if (pwm_count < duty_cycle)
+            {
+                if (Key_Press_Count == 10)
+                {
+                    LED1_On();  LED2_Off(); LED3_Off();
+                }
+                else if (Key_Press_Count == 11)
+                {
+                    if      (breath_flow_index == 0) { LED1_On();  LED2_Off(); LED3_Off(); }
+                    else if (breath_flow_index == 1) { LED1_Off(); LED2_On();  LED3_Off(); }
+                    else if (breath_flow_index == 2) { LED1_Off(); LED2_Off(); LED3_On();  }
+                }
+            }
+            else
+            {
+                LED_AllOff();
+            }
+        }
+        else if (Key_Press_Count == 12)
+        {
+            uint8_t duty1 = Get_Duty_From_Phase(master_phase);
+            uint8_t duty2 = Get_Duty_From_Phase((master_phase + 24) % 48);
+            uint8_t duty3 = Get_Duty_From_Phase((master_phase + 12) % 48);
+
+            if (pwm_count < duty1) LED1_On(); else LED1_Off();
+            if (pwm_count < duty2) LED2_On(); else LED2_Off();
+            if (pwm_count < duty3) LED3_On(); else LED3_Off();
+        }
+
+        speed_timer++;
+        if (speed_timer >= 80)
+        {
+            speed_timer = 0;
+
+            if (Key_Press_Count == 10 || Key_Press_Count == 11)
+            {
+                if (breath_dir == 1)
+                {
+                    duty_cycle++;
+                    if (duty_cycle >= 16) breath_dir = 0;
+                }
+                else
+                {
+                    duty_cycle--;
+                    if (duty_cycle == 0)
+                    {
+                        breath_dir = 1;
+                        if (Key_Press_Count == 11)
+                        {
+                            breath_flow_index++;
+                            if (breath_flow_index >= 3) breath_flow_index = 0;
+                        }
+                    }
+                }
+            }
+
+            if (Key_Press_Count == 12)
+            {
+                master_phase++;
+                if (master_phase >= 48) master_phase = 0;
+            }
+        }
+    }
+    else
+    {
+        last_breath_mode = 255;
+    }
+}
+
+// ================== ADC Voltage Task ==================
+// Execution period: 500ms
+void ADC_Task(void)
+{
+    if (Key_Press_Count == 13)
+    {
+        uint16_t adc_raw = ADC1_Get_Average(10);
+        float voltage = (float)adc_raw * (3.3f / 4096.0f);
+        printf("ADC: %4d  --->  : %.2f V\r\n", adc_raw, voltage);
+    }
+}
+
+// ================== UART Packet Receive Task ==================
+// Execution period: 10ms
+void UART_Task(void)
+{
+    // Check for complete packet like (1,2) or (4,5)
+    if (UART1_GetPacketFlag() == 1)
+    {
+        char *packet = UART1_GetPacketData();
+
+        // Parse packet format: (X,Y) - packet[0]='(' packet[1]='X' packet[2]=',' packet[3]='Y' packet[4]=')'
+        if (packet[0] == '(' && packet[4] == ')')
+        {
+            uint8_t num1 = packet[1] - '0';
+            uint8_t num2 = packet[3] - '0';
+
+            // (1,2) - Turn ON LED
+            if ((num1 == 1 && num2 == 2) || (num1 == 2 && num2 == 1))
+            {
+                LED1_On();
+                LED2_On();
+                printf(": (1,2) - LED1 LED2 \r\n");
+            }
+            // (4,5) - Turn OFF LED
+            else if ((num1 == 4 && num2 == 5) || (num1 == 5 && num2 == 4))
+            {
+                LED1_Off();
+                LED2_Off();
+                printf(": (4,5) - LED1 LED2 \r\n");
+            }
+            else
+            {
+                printf("¦Ä: (%d,%d)\r\n", num1, num2);
+            }
+        }
+        return;
+    }
+
+    // Single byte command (backward compatibility)
+    if (UART1_GetRxFlag() == 0) return;
+
+    uint8_t cmd = UART1_GetRxData();
+
+    if (cmd >= '0' && cmd <= '9')
+    {
+        Key_Press_Count = cmd - '0';
+        printf(": §Ý %d\r\n", Key_Press_Count);
+    }
+    else if (cmd == 'A' || cmd == 'a')
+    {
+        Key_Press_Count = 10;
+        printf(": §Ý 10 (LED)\r\n");
+    }
+    else if (cmd == 'B' || cmd == 'b')
+    {
+        Key_Press_Count = 11;
+        printf(": §Ý 11 (LED)\r\n");
+    }
+    else if (cmd == 'C' || cmd == 'c')
+    {
+        Key_Press_Count = 12;
+        printf(": §Ý 12 (LED§¹)\r\n");
+    }
+    else if (cmd == 'D' || cmd == 'd')
+    {
+        Key_Press_Count = 13;
+        printf(": §Ý 13 (ADC)\r\n");
+    }
+    else
+    {
+        printf("¦Ä (0~9, A, B, C, D §¹)\r\n");
+    }
+}
+
+// ================== Main ==================
+int main(void)
+{
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+
+    LED_Init();
+    KEY_Init();
+    UART1_Init(115200);
+    ADC1_Init();
+    Scheduler_Init();
+
+    printf("========================\r\n");
+    printf("\r\n");
+    printf(":\r\n");
+    printf("  1-3 -- LED1 \r\n");
+    printf("  4-6 -- LED1 \r\n");
+    printf("  7-9 -- LED \r\n");
+    printf("  10  -- LED1 \r\n");
+    printf("  11  -- LED \r\n");
+    printf("  12  -- LED §¹\r\n");
+    printf("  13  -- ADC \r\n");
+    printf(" A/B/C/D §Ý 10/11/12/13\r\n");
+    printf(" (1,2) LED1 LED2\r\n");
+    printf(" (4,5) LED1 LED2\r\n");
+    printf("========================\r\n");
+
+    while (1)
+    {
+        Scheduler_Run();
+    }
+}
