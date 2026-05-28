@@ -2,7 +2,7 @@
 #include "uart.h"
 #include "scheduler.h"
 #include "OLED.h"
-#include "dht11.h"
+#include "sht30.h"
 #include "motor.h"
 #include "buzzer.h"
 #include <string.h>
@@ -15,15 +15,15 @@ uint8_t Current_Humi = 0;  //湿度值
 uint8_t System_Status = 0;  // 0: 正常，1: 警告，2: 告警
 uint8_t Control_Mode = 0;   // 0: 自动模式，1: 手动模式
 
-// ================== DHT11 采集与控制任务 ==================
+// ================== SHT30 采集与控制任务 ==================
 // 执行周期：2000ms（2秒）
-void DHT11_Task(void)
+void SHT30_Task(void)
 {
     uint8_t temp, humi;
     static uint8_t Last_Status = 0; 
 
-    // 尝试读取 DHT11 数据
-    if (DHT11_Read_Data(&temp, &humi))
+    // 尝试读取 SHT30 数据
+    if (SHT30_Read_Data(&temp, &humi))
     {
         Current_Temp = temp;
         Current_Humi = humi;
@@ -211,8 +211,8 @@ int main(void)
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
 
     // 初始化系统各外设模块
-    UART1_Init(115200);     
-    DHT11_Init();           
+    UART1_Init(115200);
+    SHT30_Init();
     Motor_Init();           
     Buzzer_Init();          
     OLED_Init();            
@@ -222,8 +222,8 @@ int main(void)
     // 中文启动菜单信息
     printf("==================================\r\n");
     printf(" 系统启动成功\r\n");
-    printf(" 机房环境监测节点 v3.0 (完全体)\r\n");
-    printf(" DHT11温湿度传感器 ... [正常]\r\n");
+    printf(" 智慧大棚环境监测节点 v2.0\r\n");
+    printf(" SHT30温湿度传感器 ... [正常]\r\n");
     printf(" 风扇驱动及蜂鸣器 ..... [正常]\r\n");
     printf(" 串口双向通信接口 ..... [正常]\r\n");
     printf("==================================\r\n");
