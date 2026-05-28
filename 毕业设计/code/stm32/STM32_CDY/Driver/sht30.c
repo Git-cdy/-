@@ -40,6 +40,8 @@ static void I2C1_Init(void)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(SHT30_I2C_PORT, &GPIO_InitStructure);
 
+    printf("[SHT30] GPIO 配置完成（PB6/PB7 开漏输出）\r\n");
+
     // 配置 I2C
     I2C_InitStructure.I2C_Mode = I2C_Mode_I2C;
     I2C_InitStructure.I2C_DutyCycle = I2C_DutyCycle_2;
@@ -50,6 +52,8 @@ static void I2C1_Init(void)
     I2C_Init(SHT30_I2C, &I2C_InitStructure);
 
     I2C_Cmd(SHT30_I2C, ENABLE);
+
+    printf("[SHT30] I2C1 初始化完成（100kHz）\r\n");
 }
 
 // ================== I2C 延时函数 ==================
@@ -155,9 +159,27 @@ static uint8_t SHT30_Soft_Reset(void)
 // ================== SHT30 初始化 ==================
 void SHT30_Init(void)
 {
+    printf("\r\n[SHT30] ========== 初始化开始 ==========\r\n");
+
     I2C1_Init();
-    SHT30_Soft_Reset();
-    printf("[SHT30] 初始化完成\r\n");
+
+    // 尝试软复位
+    printf("[SHT30] 尝试软复位...\r\n");
+    if (SHT30_Soft_Reset())
+    {
+        printf("[SHT30] 软复位成功\r\n");
+    }
+    else
+    {
+        printf("[SHT30] 软复位失败 - I2C 通信可能有问题\r\n");
+        printf("[SHT30] 检查项：\r\n");
+        printf("  1. SHT30 是否正确接线（SCL=PB6, SDA=PB7）\r\n");
+        printf("  2. 是否有 4.7kΩ 上拉电阻到 3.3V\r\n");
+        printf("  3. SHT30 VCC 是否接 3.3V，GND 是否接地\r\n");
+        printf("  4. 用万用表测 PB6/PB7 是否有 3.3V 电压\r\n");
+    }
+
+    printf("[SHT30] ========== 初始化完成 ==========\r\n\r\n");
 }
 
 // ================== SHT30 读取温湿度 ==================
@@ -238,7 +260,8 @@ uint8_t SHT30_Read_Data(int8_t *temp, uint8_t *humi)
     crc_temp = SHT30_CRC8(&data[0], 2);
     if (crc_temp != data[2])
     {
-        printf("[SHT30] 温度 CRC 校验失败: 期望 0x%02X, 实际 0x%02X\r\n", data[2], crc_temp);
+        printf("[SHT30] 温度 CRC 校验失败: 期望 0x%02X, 实际 0x%02X (原始数据: 0x%02X 0x%02X)\r\n",
+               data[2], crc_temp, data[0], data[1]);
         return 0;
     }
 
@@ -246,7 +269,8 @@ uint8_t SHT30_Read_Data(int8_t *temp, uint8_t *humi)
     crc_humi = SHT30_CRC8(&data[3], 2);
     if (crc_humi != data[5])
     {
-        printf("[SHT30] 湿度 CRC 校验失败: 期望 0x%02X, 实际 0x%02X\r\n", data[5], crc_humi);
+        printf("[SHT30] 湿度 CRC 校验失败: 期望 0x%02X, 实际 0x%02X (原始数据: 0x%02X 0x%02X)\r\n",
+               data[5], crc_humi, data[3], data[4]);
         return 0;
     }
 
