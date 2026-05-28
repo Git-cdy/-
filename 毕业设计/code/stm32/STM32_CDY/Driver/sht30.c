@@ -191,12 +191,27 @@ uint8_t SHT30_Read_Data(int8_t *temp, uint8_t *humi)
     int16_t temp_val;
     uint8_t crc_temp, crc_humi;
 
+    // 检查 I2C 总线是否被卡住
+    if (I2C_GetFlagStatus(SHT30_I2C, I2C_FLAG_BUSY))
+    {
+        printf("[SHT30] I2C 总线被卡住，尝试恢复...\r\n");
+        // 禁用 I2C，重新初始化
+        I2C_Cmd(SHT30_I2C, DISABLE);
+        I2C_Delay_ms(10);
+        I2C_Cmd(SHT30_I2C, ENABLE);
+        I2C_Delay_ms(10);
+    }
+
     // 发送起始条件
     I2C_GenerateSTART(SHT30_I2C, ENABLE);
     timeout = 0;
     while (!I2C_CheckEvent(SHT30_I2C, I2C_EVENT_MASTER_MODE_SELECT) && timeout < 10000)
         timeout++;
-    if (timeout >= 10000) return 0;
+    if (timeout >= 10000)
+    {
+        printf("[SHT30] 发送起始条件超时\r\n");
+        return 0;
+    }
 
     // 发送地址 + 写入位
     I2C_Send7bitAddress(SHT30_I2C, SHT30_I2C_ADDR << 1, I2C_Direction_Transmitter);

@@ -23,12 +23,22 @@ void SHT30_Task(void)
     uint8_t humi;
     static uint8_t Last_Status = 0; 
 
-    // 尝试读取 SHT30 数据
-    if (SHT30_Read_Data(&temp, &humi))
+    // 尝试读取 SHT30 数据（最多重试 3 次）
+    uint8_t retry = 0;
+    while (retry < 3 && !SHT30_Read_Data(&temp, &humi))
     {
-        Current_Temp = temp;
-        Current_Humi = humi;
+        retry++;
+        printf("[SHT30_Task] 读取失败，重试 %d/3\r\n", retry);
     }
+
+    if (retry >= 3)
+    {
+        printf("[SHT30_Task] 读取失败 3 次，放弃本次采集\r\n");
+        return;
+    }
+
+    Current_Temp = temp;
+    Current_Humi = humi;
 
     // -------- 仅在自动模式下执行温度控制逻辑 --------
     if (Control_Mode == 0)
