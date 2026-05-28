@@ -32,52 +32,70 @@
 ```
 大创兼毕计/
 ├── CLAUDE.md              ← 本文件
+├── README.md              ← 项目快速开始指南
+├── .gitignore             ← git 配置
+├── scripts/
+│   └── commit-stage.sh    ← 一键 commit + tag + push 脚本
+├── tools/                 ← MCP 工具
+│   ├── aiot-mcp-server/   ← 阿里云 IoT MQTT MCP（Node.js）
+│   └── serial-mcp/        ← 串口调试 MCP（Python）
 ├── 大创/                   ← 申报书、参考资料
 ├── 互联网+/               ← 互联网+ 比赛材料
 └── 毕业设计/
     └── code/stm32/
-        ├── greenhouse/    ← ★ 当前工程（CDY调度器 + 大棚驱动 合并版）
-        │   ├── Driver/    ← 所有驱动
-        │   │   ├── pin_config.h    ← 集中引脚定义（唯一真相源）
-        │   │   ├── scheduler.c/h   ← 时间片轮询调度器
-        │   │   ├── uart.c/h        ← UART1(K210帧) + UART2(ESP8266)
-        │   │   ├── sht30.c/h       ← 硬件I2C1
-        │   │   ├── bh1750.c/h      ← 硬件I2C1 (已加超时保护)
-        │   │   ├── soil.c/h        ← ADC
-        │   │   ├── relay.c/h       ← 4路继电器
-        │   │   ├── buzzer_pwm.c/h  ← TIM3 CH2 PWM
-        │   │   ├── OLED.c/h        ← 硬件I2C2 + UTF-8中文引擎
-        │   │   ├── OLED_Font.h     ← 13个汉字字模
-        │   │   └── delay.c/h
-        │   ├── User/
-        │   │   └── main.c          ← 完整版主程序
-        │   ├── Tests/
-        │   │   └── step0_main.c    ← 第0步极简测试版
-        │   └── Library/            ← STM32 标准外设库 v3.5.0
-        └── STM32_CDY/              ← 原始机房监测项目（参考用）
+        └── STM32_CDY/     ← ★ 当前工程（机房版基线 → 大棚版演化）
+            ├── Driver/    ← 所有驱动
+            │   ├── scheduler.c/h   ← 时间片轮询调度器
+            │   ├── uart.c/h        ← UART1(K210帧) + UART2(ESP8266)
+            │   ├── dht11.c/h       ← DHT11（当前）→ SHT30（M1）
+            │   ├── OLED.c/h        ← 软件I2C PB12/PB13（当前）
+            │   ├── OLED_Font.h     ← 13个汉字字模
+            │   ├── motor.c/h       ← PWM（当前）→ 4路继电器（M4）
+            │   ├── buzzer.c/h      ← 蜂鸣器
+            │   ├── adc.c/h         ← ADC（后续加土壤湿度）
+            │   ├── key.c/h         ← 按键（参考）
+            │   ├── led.c/h         ← LED（参考）
+            │   └── delay.c/h
+            ├── User/
+            │   ├── main.c          ← 机房版主程序（完整体）
+            │   ├── stm32f10x_conf.h
+            │   ├── stm32f10x_it.c/h
+            │   └── main.c.gb2312   ← 备份
+            ├── Tests/
+            │   └── step0_main.c    ← 第0步极简测试版（待烧录验证）
+            ├── Library/            ← STM32 标准外设库 v3.5.0
+            ├── Start/              ← 启动文件
+            ├── Objects/            ├── 编译产物（.gitignore 排除）
+            ├── Listings/           ├── 编译产物（.gitignore 排除）
+            ├── STM32_CDY.uvprojx   ← Keil 工程文件
+            ├── STM32_CDY.uvoptx
+            ├── 工程介绍.md         ← 机房版工程说明
+            └── 修改历程.md         ← 版本演化记录
 ```
 
 ---
 
-## 三、引脚分配总表
+## 三、引脚分配总表（STM32_CDY 实际配置）
 
-| 引脚 | 功能 | 设备 | 注意事项 |
-|------|------|------|---------|
-| PB6 | I2C1_SCL | SHT30 + BH1750 | 4.7kΩ 上拉至 3.3V |
-| PB7 | I2C1_SDA | SHT30 + BH1750 | 同上 |
-| PB10 | I2C2_SCL | OLED | 4.7kΩ 上拉至 3.3V |
-| PB11 | I2C2_SDA | OLED | 同上 |
-| PA0 | ADC1_IN0 | 土壤湿度 | VCC 接 3.3V（不是 5V！） |
-| PA9 | USART1_TX | K210 | 115200 8N1, 3.3V 直连 |
-| PA10 | USART1_RX | K210 | 同上 |
-| PA2 | USART2_TX | ESP8266 | 115200 8N1 |
-| PA3 | USART2_RX | ESP8266 | 同上 |
-| PA4 | GPIO | 风机继电器 | 低电平 ON, 串 1kΩ |
-| PA5 | GPIO | 水阀继电器 | 同上 |
-| PA6 | GPIO | 补光灯继电器 | 同上 |
-| PA7 | TIM3_CH2 | 蜂鸣器 PWM | 2kHz |
-| PA13 | SWDIO | ST-Link | ⛔ 禁止占用 |
-| PA14 | SWCLK | ST-Link | ⛔ 禁止占用 |
+| 引脚 | 功能 | 设备 | 当前状态 | 备注 |
+|------|------|------|---------|------|
+| PB6 | I2C1_SCL | SHT30 + BH1750 | ⬜ 未用 | 4.7kΩ 上拉至 3.3V（M1/M2 时启用） |
+| PB7 | I2C1_SDA | SHT30 + BH1750 | ⬜ 未用 | 同上 |
+| PB10 | I2C2_SCL | OLED（可选） | ⬜ 未用 | 硬件 I2C2（后期优化用） |
+| PB11 | I2C2_SDA | OLED（可选） | ⬜ 未用 | 同上 |
+| **PB12** | **软件 I2C_SCL** | **OLED（当前）** | **✅ 在用** | **4.7kΩ 上拉至 3.3V** |
+| **PB13** | **软件 I2C_SDA** | **OLED（当前）** | **✅ 在用** | **同上** |
+| PA0 | ADC1_IN0 | 土壤湿度 | ⬜ 未用 | VCC 接 3.3V（M3 时启用） |
+| PA9 | USART1_TX | K210 | ⬜ 未用 | 115200 8N1, 3.3V 直连（M6 时启用） |
+| PA10 | USART1_RX | K210 | ⬜ 未用 | 同上 |
+| PA2 | USART2_TX | ESP8266 | ⬜ 未用 | 115200 8N1（M8 时启用） |
+| PA3 | USART2_RX | ESP8266 | ⬜ 未用 | 同上 |
+| PA4 | GPIO | 风机继电器 | ⬜ 未用 | 低电平 ON（M4 时启用） |
+| PA5 | GPIO | 水阀继电器 | ⬜ 未用 | 同上 |
+| PA6 | GPIO | 补光灯继电器 | ⬜ 未用 | 同上 |
+| PA7 | TIM3_CH2 | 蜂鸣器 PWM | ✅ 在用 | 2kHz（机房版已用） |
+| PA13 | SWDIO | ST-Link | ⛔ 禁止 | — |
+| PA14 | SWCLK | ST-Link | ⛔ 禁止 | — |
 
 ---
 
@@ -98,25 +116,28 @@
 
 ## 五、开发原则
 
-**增量集成测试，禁止一口吃成胖子：**
+**增量集成测试，禁止一口吃成胖子。STM32_CDY 机房版已验证可跑，现在逐步演化为大棚版：**
 
 ```
-第0步  时钟+调度器+串口         ← 地基
-第1步  GPIO 点灯
-第2步  I2C 总线扫描
-第3步  SHT30 + BH1750
-第4步  ADC 土壤湿度
-第5步  OLED 显示
-第6步  继电器 + 蜂鸣器
-第7步  控制逻辑 (传感器→执行器闭环)
-        ───── 以上 = 大棚基础版可演示 ─────
-第8步  K210 UART 帧协议
-第9步  多模态融合
-第10步 ESP8266 + 阿里云 MQTT
-第11步 全链路 + 离线降级
-```
+[已完成 - 机房版继承]
+✅ 调度器 + UART + OLED + Motor + Buzzer + DHT11
 
-每步验证标准：串口 printf 可见 + 肉眼可确认。
+[向大棚版演化 - 每个 milestone 一个 commit + tag]
+M1  SHT30 替换 DHT11           ← 温湿度升级（I2C1 0x44）
+M2  加 BH1750 光照             ← 光照传感器（I2C1 0x23）
+M3  加土壤湿度 ADC             ← 土壤湿度（ADC PA0）
+M4  Motor → 4 路继电器         ← 执行器升级（PA4/PA5/PA6）
+M5  OLED 文案改大棚 + 字模扩充 ← 本地化（中文字模）
+M6  K210 UART1 帧协议          ← 边缘 AI 集成（PA9/PA10）
+M7  多模态融合                 ← 传感器+图像决策树
+M8  ESP8266 + 阿里云 MQTT      ← 云端接入（PA2/PA3）
+M9  全链路 + 离线降级          ← 容错机制
+
+每个 milestone 验证标准：
+  - 串口 printf 可见
+  - OLED 显示正确
+  - 肉眼可确认硬件工作
+```
 
 ---
 
@@ -147,13 +168,32 @@ Password: HMAC-SHA1(DeviceSecret, "clientId{clientId}deviceName{deviceName}produ
 
 ---
 
-## 八、当前状态（2026-05-28）
+## 八、当前状态（2026-05-28 更新）
 
-- ✅ 代码合并完成（greenhouse/ = CDY调度器 + 大棚驱动）
+### 机房版基线（v1.0-jifang-baseline）
+- ✅ STM32_CDY 工程完整（调度器 + UART + OLED + DHT11 + Motor + Buzzer）
 - ✅ 4 个已知 bug 已修复
 - ✅ 第 0 步测试代码就绪（Tests/step0_main.c）
-- ⬜ 待烧录验证第 0 步
-- OLED 汉字字模仅 13 个（机房监控温度湿状态正常警告），后续需扩充
+- ⏳ **待烧录验证第 0 步**（时钟+调度器+串口）
+- ✅ 本地 git 首次 commit + tag（v1.0-jifang-baseline）
+- ⏳ GitHub push（网络问题，可后续处理）
+
+### 工具链就绪
+- ✅ aiot-mcp-server（Node.js，MQTT 调试）
+- ✅ serial-mcp（Python，串口调试）
+- ✅ anthropic skills 17 个（文档/代码生成）
+- ✅ USB-TTL 驱动（硬件就绪）
+
+### 大棚版演化（待启动）
+- ⬜ M1: SHT30 替换 DHT11
+- ⬜ M2: 加 BH1750 光照
+- ⬜ M3: 加土壤湿度 ADC
+- ⬜ M4: Motor → 4 路继电器
+- ⬜ M5: OLED 文案改大棚 + 字模扩充
+- ⬜ M6: K210 UART1 帧协议
+- ⬜ M7: 多模态融合
+- ⬜ M8: ESP8266 + 阿里云 MQTT
+- ⬜ M9: 全链路 + 离线降级
 
 ---
 
