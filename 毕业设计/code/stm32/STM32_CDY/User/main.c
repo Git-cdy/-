@@ -98,9 +98,9 @@ void OLED_Task(void)
     switch (Page_Index)
     {
         case 0:
-            // -------- 第一行：居中显示 == 机房监控 == --------
+            // -------- 第一行：居中显示 == 智慧大棚 == --------
             OLED_ShowString(1, 1, "== ");
-            OLED_ShowChinese(1, 4, "机房监控");  
+            OLED_ShowChinese(1, 4, "智慧大棚");
             OLED_ShowString(1, 12, " ==");
 
             // -------- 第二行：温度 : xx C --------
@@ -115,33 +115,19 @@ void OLED_Task(void)
             {
                 OLED_ShowNum(2, 8, Current_Temp, 2);
             }
-            OLED_ShowString(2, 11, " C  ");   
+            OLED_ShowString(2, 11, " C  ");
 
             // -------- 第三行：湿度 : xx % --------
-            OLED_ShowChinese(3, 1, "湿度");     
+            OLED_ShowChinese(3, 1, "湿度");
             OLED_ShowString(3, 5, " : ");
             OLED_ShowNum(3, 8, Current_Humi, 2);
-            OLED_ShowString(3, 11, " %  ");   
+            OLED_ShowString(3, 11, " %  ");
 
-            // -------- 第四行：状态 : [对应中文] --------
-            OLED_ShowChinese(4, 1, "状态");     
+            // -------- 第四行：光照 : xxxxx lux --------
+            OLED_ShowChinese(4, 1, "光照");
             OLED_ShowString(4, 5, " : ");
-
-            if (System_Status == 2)
-            {
-                OLED_ShowChinese(4, 8, "告警");  
-                OLED_ShowString(4, 12, "  ");   
-            }
-            else if (System_Status == 1)
-            {
-                OLED_ShowChinese(4, 8, "警告");  
-                OLED_ShowString(4, 12, "  ");   
-            }
-            else
-            {
-                OLED_ShowChinese(4, 8, "正常");  
-                OLED_ShowString(4, 12, "  ");   
-            }
+            OLED_ShowNum(4, 8, Current_Lux, 5);
+            OLED_ShowString(4, 13, " ");
             break;
 
         default:
@@ -184,8 +170,8 @@ void UART_Task(void)
     if (report_timer >= 200)
     {
         report_timer = 0;
-        printf("[系统数据] 温度:%d度, 湿度:%d%%, 模式:%s, 状态:%s\r\n",
-               Current_Temp, Current_Humi,
+        printf("[系统数据] 温度:%d度, 湿度:%d%%, 光照:%d lux, 模式:%s, 状态:%s\r\n",
+               Current_Temp, Current_Humi, Current_Lux,
                (Control_Mode == 0) ? "自动" : "手动",
                (System_Status == 0) ? "正常" : ((System_Status == 1) ? "警告" : "告警"));
     }
