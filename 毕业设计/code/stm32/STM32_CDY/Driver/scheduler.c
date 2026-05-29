@@ -18,7 +18,7 @@ extern void UART_Task(void);           // 串口通信与指令处理任务
 static Task_t Task_List[] =
 {
     { SHT30_Task,   2000, 0 },   // SHT30 采集与控制：每 2000ms 执行一次
-    { BH1750_Task,  1000, 0 },   // BH1750 光照采集：每 1000ms 执行一次
+    { BH1750_Task,  2100, 0 },   // BH1750 光照采集：每 2100ms 执行一次（错开 SHT30，避免 I2C 冲突）
     { UART_Task,      10, 0 },   // 串口处理：每 10ms 执行一次，处理接收数据
     { OLED_Task,     100, 0 },   // OLED 显示：每 100ms 执行一次，刷新屏幕
 };
