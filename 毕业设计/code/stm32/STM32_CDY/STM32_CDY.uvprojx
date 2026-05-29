@@ -580,11 +580,6 @@
               <FilePath>.\Driver\uart.c</FilePath>
             </File>
             <File>
-              <FileName>dht11.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Driver\dht11.c</FilePath>
-            </File>
-            <File>
               <FileName>buzzer.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Driver\buzzer.c</FilePath>
@@ -593,6 +588,11 @@
               <FileName>motor.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Driver\motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>sht30.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Driver\sht30.c</FilePath>
             </File>
           </Files>
         </Group>
