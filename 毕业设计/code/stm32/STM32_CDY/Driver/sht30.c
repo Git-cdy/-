@@ -2,28 +2,6 @@
 #include "sht30.h"
 #include <stdio.h>
 
-// ================== CRC-8 校验函数 ==================
-// SHT30 使用 CRC-8 多项式：x^8 + x^5 + x^4 + 1（0x31）
-static uint8_t SHT30_CRC8(uint8_t *data, uint8_t len)
-{
-    uint8_t crc = 0xFF;
-    uint8_t i, j;
-
-    for (i = 0; i < len; i++)
-    {
-        crc ^= data[i];
-        for (j = 0; j < 8; j++)
-        {
-            if (crc & 0x80)
-                crc = (crc << 1) ^ 0x31;
-            else
-                crc = crc << 1;
-        }
-    }
-
-    return crc;
-}
-
 // ================== I2C1 初始化（PB6/PB7） ==================
 static void I2C1_Init(void)
 {
@@ -64,58 +42,6 @@ static void I2C_Delay_ms(uint32_t ms)
         for (j = 0; j < 123; j++);  // 约 1ms（72MHz 时钟）
 }
 
-// ================== I2C 写入字节 ==================
-static uint8_t I2C_Write_Byte(uint8_t data)
-{
-    uint32_t timeout = 0;
-
-    // 等待 I2C 总线空闲
-    while (I2C_GetFlagStatus(SHT30_I2C, I2C_FLAG_BUSY) && timeout < 10000)
-        timeout++;
-    if (timeout >= 10000) return 0;
-
-    // 发送起始条件
-    I2C_GenerateSTART(SHT30_I2C, ENABLE);
-    timeout = 0;
-    while (!I2C_CheckEvent(SHT30_I2C, I2C_EVENT_MASTER_MODE_SELECT) && timeout < 10000)
-        timeout++;
-    if (timeout >= 10000) return 0;
-
-    // 发送地址 + 写入位
-    I2C_Send7bitAddress(SHT30_I2C, SHT30_I2C_ADDR << 1, I2C_Direction_Transmitter);
-    timeout = 0;
-    while (!I2C_CheckEvent(SHT30_I2C, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED) && timeout < 10000)
-        timeout++;
-    if (timeout >= 10000) return 0;
-
-    // 发送数据字节
-    I2C_SendData(SHT30_I2C, data);
-    timeout = 0;
-    while (!I2C_CheckEvent(SHT30_I2C, I2C_EVENT_MASTER_BYTE_TRANSMITTED) && timeout < 10000)
-        timeout++;
-    if (timeout >= 10000) return 0;
-
-    return 1;
-}
-
-// ================== I2C 读取字节 ==================
-static uint8_t I2C_Read_Byte(uint8_t *data, uint8_t ack)
-{
-    uint32_t timeout = 0;
-
-    if (ack)
-        I2C_AcknowledgeConfig(SHT30_I2C, ENABLE);
-    else
-        I2C_AcknowledgeConfig(SHT30_I2C, DISABLE);
-
-    timeout = 0;
-    while (!I2C_CheckEvent(SHT30_I2C, I2C_EVENT_MASTER_BYTE_RECEIVED) && timeout < 10000)
-        timeout++;
-    if (timeout >= 10000) return 0;
-
-    *data = I2C_ReceiveData(SHT30_I2C);
-    return 1;
-}
 
 // ================== SHT30 软复位 ==================
 static uint8_t SHT30_Soft_Reset(void)
@@ -159,17 +85,17 @@ static uint8_t SHT30_Soft_Reset(void)
 // ================== SHT30 初始化 ==================
 void SHT30_Init(void)
 {
+    int8_t test_temp;
+    uint8_t test_humi;
+    uint8_t init_retry = 0;
+
     printf("\r\n[SHT30] ========== 初始化开始 ==========\r\n");
 
     I2C1_Init();
 
     // 尝试软复位
     printf("[SHT30] 尝试软复位...\r\n");
-    if (SHT30_Soft_Reset())
-    {
-        printf("[SHT30] 软复位成功\r\n");
-    }
-    else
+    if (!SHT30_Soft_Reset())
     {
         printf("[SHT30] 软复位失败 - I2C 通信可能有问题\r\n");
         printf("[SHT30] 检查项：\r\n");
@@ -178,8 +104,31 @@ void SHT30_Init(void)
         printf("  3. SHT30 VCC 是否接 3.3V，GND 是否接地\r\n");
         printf("  4. 用万用表测 PB6/PB7 是否有 3.3V 电压\r\n");
         printf("  5. 检查 I2C1 是否被其他设备（BH1750）占用\r\n");
+        printf("[SHT30] ========== 初始化失败 ==========\r\n\r\n");
+        return;
     }
 
+    printf("[SHT30] 软复位成功\r\n");
+
+    // 初始化验证：尝试读取一次数据
+    printf("[SHT30] 验证通信...\r\n");
+    I2C_Delay_ms(50);  // 等待复位完成
+
+    while (init_retry < 3 && !SHT30_Read_Data(&test_temp, &test_humi))
+    {
+        init_retry++;
+        printf("[SHT30] 初始化验证失败，重试 %d/3\r\n", init_retry);
+        I2C_Delay_ms(100);
+    }
+
+    if (init_retry >= 3)
+    {
+        printf("[SHT30] 初始化验证失败 3 次 - 传感器无响应\r\n");
+        printf("[SHT30] ========== 初始化失败 ==========\r\n\r\n");
+        return;
+    }
+
+    printf("[SHT30] 初始化验证成功 (T=%d°C, H=%d%%)\r\n", test_temp, test_humi);
     printf("[SHT30] ========== 初始化完成 ==========\r\n\r\n");
 }
 
@@ -190,7 +139,6 @@ uint8_t SHT30_Read_Data(int8_t *temp, uint8_t *humi)
     uint32_t timeout = 0;
     uint16_t temp_raw, humi_raw;
     int16_t temp_val;
-    uint8_t crc_temp, crc_humi;
 
     // 检查 I2C 总线是否被卡住
     if (I2C_GetFlagStatus(SHT30_I2C, I2C_FLAG_BUSY))
@@ -300,6 +248,23 @@ uint8_t SHT30_Read_Data(int8_t *temp, uint8_t *humi)
 
     // 湿度转换：RH = 100 * (humi_raw / 65535)
     *humi = (uint8_t)((100 * humi_raw) / 65535);
+
+    // ========== 数据有效性检查 ==========
+    // SHT30 工作范围：-40~125°C，0~100%RH
+    // 如果超出范围，说明通信失败或数据损坏
+    if (*temp < -40 || *temp > 125)
+    {
+        printf("[SHT30] 温度超出范围 (%d°C)，数据无效，原始值: 0x%02X 0x%02X\r\n",
+               *temp, data[0], data[1]);
+        return 0;
+    }
+
+    if (*humi > 100)
+    {
+        printf("[SHT30] 湿度超出范围 (%d%%)，数据无效，原始值: 0x%02X 0x%02X\r\n",
+               *humi, data[3], data[4]);
+        return 0;
+    }
 
     return 1;
 }

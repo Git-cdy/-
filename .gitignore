@@ -3,6 +3,18 @@
 # 原则：只追踪源代码和文档，二进制/编译产物/敏感信息全部排除
 # ============================================
 
+# ---------- Rust 编译产物 ----------
+**/target/
+**/*.rlib
+**/*.rmeta
+Cargo.lock
+
+# ---------- Node.js 编译产物 ----------
+**/node_modules/
+**/dist/
+**/build/
+**/.next/
+
 # ---------- Keil µVision 编译产物 ----------
 **/Objects/
 **/Listings/
@@ -27,10 +39,12 @@ JLinkSettings.ini
 JLinkLog.txt
 
 # ---------- STM32 标准外设库（体积大，可重新下载，无修改价值） ----------
-**/Library/CMSIS/
-**/Library/STM32F10x_StdPeriph_Driver/
-**/Library/Startup/
+**/Library/
 **/Start/
+
+# ---------- 参考工程（只在本地保留，不进 git） ----------
+# STM32_CDY 是参考工程，已迁移到主工程 STM32_CDY 目录，保留用于对比
+# 不再排除它
 
 # ---------- 系统/编辑器临时文件 ----------
 .DS_Store
@@ -89,7 +103,11 @@ desktop.ini
 **/*_secret.*
 **/*_private.*
 
-# ---------- AI 协作产物（已废弃但保留本地） ----------
+# ---------- MCP 工具源代码（编译产物会被上面的规则排除） ----------
+# tools/ 目录下的 MCP servers 源码保留，但编译产物排除
+tools/**/node_modules/
+tools/**/dist/
+tools/**/target/
 .claude-codex/
 .claude-codex.archive/
 

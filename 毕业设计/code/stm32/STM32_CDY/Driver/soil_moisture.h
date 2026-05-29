@@ -19,11 +19,13 @@
 // 标定方法：
 // 1. 干燥（0%）：测得 ADC 值 = DRY_ADC_VALUE
 // 2. 饱和（100%）：测得 ADC 值 = WET_ADC_VALUE
-// 3. 湿度 = (ADC - DRY) / (WET - DRY) * 100%
+// 3. 湿度 = (DRY - ADC) / (DRY - WET) * 100%（注意：干燥时 ADC 高，泡水时 ADC 低）
 //
-// 默认值（需根据实际传感器调整）：
-#define SOIL_DRY_ADC_VALUE       800    // 干燥时 ADC 值（0%）
-#define SOIL_WET_ADC_VALUE       3200   // 饱和时 ADC 值（100%）
+// 实际标定值（2026-05-29 用户测量）：
+// 干燥：ADC ≈ 3000
+// 泡水：ADC ≈ 1000
+#define SOIL_DRY_ADC_VALUE       3000    // 干燥时 ADC 值（0%）
+#define SOIL_WET_ADC_VALUE       1000    // 饱和时 ADC 值（100%）
 
 // ================== 土壤湿度初始化与读取 ==================
 // moisture: 土壤湿度（0~100%）

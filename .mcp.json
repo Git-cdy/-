@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "aiot-mqtt": {
+      "command": "node",
+      "args": [
+        "c:/Users/31040/OneDrive/桌面/大创兼毕计/tools/aiot-mcp-server/dist/index.js"
+      ],
+      "env": {
+        "MQTT_BROKER_URL": "mqtt://broker.emqx.io:1883",
+        "MQTT_USERNAME": "",
+        "MQTT_PASSWORD": ""
+      }
+    },
+    "serial-mcp": {
+      "command": "python",
+      "args": [
+        "c:/Users/31040/OneDrive/桌面/大创兼毕计/tools/serial-mcp/serial_MCP.py"
+      ]
+    }
+  }
+}

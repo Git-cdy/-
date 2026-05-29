@@ -31,16 +31,11 @@ void Soil_Moisture_Init(void)
     ADC_Init(SOIL_ADC, &ADC_InitStructure);
 
     // 配置 ADC 通道
-    ADC_RegularChannelConfig(SOIL_ADC, SOIL_ADC_CHANNEL, 1, ADC_SampleTime_55Cycles5);
+    // 增加采样时间到 239.5 周期，确保模拟信号充分采样
+    ADC_RegularChannelConfig(SOIL_ADC, SOIL_ADC_CHANNEL, 1, ADC_SampleTime_239Cycles5);
 
     // 启用 ADC
     ADC_Cmd(SOIL_ADC, ENABLE);
-
-    // ADC 校准
-    ADC_ResetCalibration(SOIL_ADC);
-    while (ADC_GetResetCalibrationStatus(SOIL_ADC));
-    ADC_StartCalibration(SOIL_ADC);
-    while (ADC_GetCalibrationStatus(SOIL_ADC));
 
     printf("[Soil_Moisture] ADC1 初始化完成（12 位分辨率，0~4095）\r\n");
     printf("[Soil_Moisture] 标定参数：干燥=%d, 饱和=%d\r\n", SOIL_DRY_ADC_VALUE, SOIL_WET_ADC_VALUE);
@@ -55,7 +50,8 @@ uint8_t Soil_Moisture_Read(uint16_t *adc_value, uint8_t *moisture)
     uint8_t i;
 
     // 多次采样求平均（减少噪声）
-    for (i = 0; i < 5; i++)
+    // 采样 20 次，每次间隔 5ms，确保数据稳定
+    for (i = 0; i < 20; i++)
     {
         // 启动 ADC 转换
         ADC_SoftwareStartConvCmd(SOIL_ADC, ENABLE);
@@ -72,25 +68,35 @@ uint8_t Soil_Moisture_Read(uint16_t *adc_value, uint8_t *moisture)
         }
 
         adc_sum += ADC_GetConversionValue(SOIL_ADC);
+
+        // 采样间隔 10ms（增加稳定性）
+        if (i < 19)
+        {
+            for (int j = 0; j < 10 * 123; j++);  // 约 10ms
+        }
     }
 
     // 计算平均值
-    *adc_value = adc_sum / 5;
+    *adc_value = adc_sum / 20;
+
+    // 临时打印原始 ADC 值用于标定
+    printf("[Soil_Moisture] 原始 ADC 值: %d\r\n", *adc_value);
 
     // 转换为湿度百分比
-    // 公式：moisture = (adc - dry) / (wet - dry) * 100%
-    // 整数计算：moisture = (adc - dry) * 100 / (wet - dry)
-    if (*adc_value <= SOIL_DRY_ADC_VALUE)
+    // 公式：moisture = (DRY - adc) / (DRY - WET) * 100%
+    // 因为干燥时 ADC 大（3000），泡水时 ADC 小（1000）
+    // 整数计算：moisture = (DRY - adc) * 100 / (DRY - WET)
+    if (*adc_value >= SOIL_DRY_ADC_VALUE)
     {
         *moisture = 0;
     }
-    else if (*adc_value >= SOIL_WET_ADC_VALUE)
+    else if (*adc_value <= SOIL_WET_ADC_VALUE)
     {
         *moisture = 100;
     }
     else
     {
-        raw_moisture = (int16_t)((*adc_value - SOIL_DRY_ADC_VALUE) * 100 / (SOIL_WET_ADC_VALUE - SOIL_DRY_ADC_VALUE));
+        raw_moisture = (int16_t)((SOIL_DRY_ADC_VALUE - *adc_value) * 100 / (SOIL_DRY_ADC_VALUE - SOIL_WET_ADC_VALUE));
         *moisture = (uint8_t)raw_moisture;
     }
 

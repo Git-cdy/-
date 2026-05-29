@@ -19,6 +19,7 @@ uint16_t Current_Soil_ADC = 0;  //土壤湿度 ADC 值
 uint8_t Current_Soil_Moisture = 0;  //土壤湿度（%）
 uint8_t System_Status = 0;  // 0: 正常，1: 警告，2: 告警
 uint8_t Control_Mode = 0;   // 0: 自动模式，1: 手动模式
+uint8_t SHT30_Error = 0;    // 0: 正常，1: 通信失败
 
 // ================== SHT30 采集与控制任务 ==================
 // 执行周期：2000ms（2秒）
@@ -26,7 +27,7 @@ void SHT30_Task(void)
 {
     int8_t temp;
     uint8_t humi;
-    static uint8_t Last_Status = 0; 
+    static uint8_t Last_Status = 0;
 
     // 尝试读取 SHT30 数据（最多重试 3 次）
     uint8_t retry = 0;
@@ -38,10 +39,13 @@ void SHT30_Task(void)
 
     if (retry >= 3)
     {
-        printf("[SHT30_Task] 读取失败 3 次，放弃本次采集\r\n");
+        printf("[SHT30_Task] 读取失败 3 次，传感器无响应\r\n");
+        SHT30_Error = 1;  // 标记错误状态
         return;
     }
 
+    // 读取成功，清除错误标志
+    SHT30_Error = 0;
     Current_Temp = temp;
     Current_Humi = humi;
 
@@ -52,19 +56,19 @@ void SHT30_Task(void)
         {
             Motor_SetSpeed(100);
             Buzzer_On();
-            System_Status = 2;  
+            System_Status = 2;
         }
         else if (Current_Temp >= 30)  // 警告阈值 30℃
         {
             Motor_SetSpeed(60);
             Buzzer_Off();
-            System_Status = 1;  
+            System_Status = 1;
         }
         else
         {
             Motor_SetSpeed(0);
             Buzzer_Off();
-            System_Status = 0;  
+            System_Status = 0;
         }
 
 // -------- 状态突变时，串口立刻主动向电脑弹窗中文告警 --------
@@ -89,7 +93,7 @@ void SHT30_Task(void)
             {
                 printf("\r\n[恢复正常] 机房温度已完全回落，系统恢复安全状态。\r\n");
             }
-            Last_Status = System_Status; 
+            Last_Status = System_Status;
         }
     }
 }
@@ -106,25 +110,39 @@ void OLED_Task(void)
             OLED_ShowChinese(1, 4, "智慧大棚");
             OLED_ShowString(1, 12, " ==");
 
-            // -------- 第二行：温度 : xx C --------
+            // -------- 第二行：温度 : xx C 或 ERR --------
             OLED_ShowChinese(2, 1, "温度");
             OLED_ShowString(2, 5, " : ");
-            if (Current_Temp < 0)
+            if (SHT30_Error)
             {
-                OLED_ShowString(2, 8, "-");
-                OLED_ShowNum(2, 9, -Current_Temp, 2);
+                OLED_ShowString(2, 8, "ERR ");
             }
             else
             {
-                OLED_ShowNum(2, 8, Current_Temp, 2);
+                if (Current_Temp < 0)
+                {
+                    OLED_ShowString(2, 8, "-");
+                    OLED_ShowNum(2, 9, -Current_Temp, 2);
+                }
+                else
+                {
+                    OLED_ShowNum(2, 8, Current_Temp, 2);
+                }
+                OLED_ShowString(2, 11, " C  ");
             }
-            OLED_ShowString(2, 11, " C  ");
 
-            // -------- 第三行：湿度 : xx % --------
+            // -------- 第三行：湿度 : xx % 或 ERR --------
             OLED_ShowChinese(3, 1, "湿度");
             OLED_ShowString(3, 5, " : ");
-            OLED_ShowNum(3, 8, Current_Humi, 2);
-            OLED_ShowString(3, 11, " %  ");
+            if (SHT30_Error)
+            {
+                OLED_ShowString(3, 8, "ERR ");
+            }
+            else
+            {
+                OLED_ShowNum(3, 8, Current_Humi, 2);
+                OLED_ShowString(3, 11, " %  ");
+            }
 
             // -------- 第四行：光照 : xxxxx lux --------
             OLED_ShowChinese(4, 1, "光照");
@@ -191,10 +209,19 @@ void UART_Task(void)
     if (report_timer >= 200)
     {
         report_timer = 0;
-        printf("[系统数据] 温度:%d度, 湿度:%d%%, 光照:%d lux, 土壤:%d%%, 模式:%s, 状态:%s\r\n",
-               Current_Temp, Current_Humi, Current_Lux, Current_Soil_Moisture,
-               (Control_Mode == 0) ? "自动" : "手动",
-               (System_Status == 0) ? "正常" : ((System_Status == 1) ? "警告" : "告警"));
+        if (SHT30_Error)
+        {
+            printf("[系统数据] 温度:ERR, 湿度:ERR, 光照:%d lux, 土壤:%d%%, 模式:%s, 状态:传感器故障\r\n",
+                   Current_Lux, Current_Soil_Moisture,
+                   (Control_Mode == 0) ? "自动" : "手动");
+        }
+        else
+        {
+            printf("[系统数据] 温度:%d度, 湿度:%d%%, 光照:%d lux, 土壤:%d%%, 模式:%s, 状态:%s\r\n",
+                   Current_Temp, Current_Humi, Current_Lux, Current_Soil_Moisture,
+                   (Control_Mode == 0) ? "自动" : "手动",
+                   (System_Status == 0) ? "正常" : ((System_Status == 1) ? "警告" : "告警"));
+        }
     }
 
     // -------- 处理接收到的单字节命令 --------

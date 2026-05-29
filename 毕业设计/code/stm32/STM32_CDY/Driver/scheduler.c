@@ -20,7 +20,7 @@ static Task_t Task_List[] =
 {
     { SHT30_Task,           2000, 0 },   // SHT30 采集与控制：每 2000ms 执行一次
     { BH1750_Task,          2100, 0 },   // BH1750 光照采集：每 2100ms 执行一次（错开 SHT30）
-    { Soil_Moisture_Task,   1000, 0 },   // 土壤湿度采集：每 1000ms 执行一次（不与 I2C 冲突）
+    { Soil_Moisture_Task,   2200, 0 },   // 土壤湿度采集：改为 2200ms（错开 SHT30 和 BH1750）
     { UART_Task,              10, 0 },   // 串口处理：每 10ms 执行一次，处理接收数据
     { OLED_Task,             100, 0 },   // OLED 显示：每 100ms 执行一次，刷新屏幕
 };

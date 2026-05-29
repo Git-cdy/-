@@ -594,6 +594,16 @@
               <FileType>1</FileType>
               <FilePath>.\Driver\sht30.c</FilePath>
             </File>
+            <File>
+              <FileName>bh1750.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Driver\bh1750.c</FilePath>
+            </File>
+            <File>
+              <FileName>soil_moisture.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Driver\soil_moisture.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
