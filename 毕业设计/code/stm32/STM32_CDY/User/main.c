@@ -4,6 +4,7 @@
 #include "OLED.h"
 #include "sht30.h"
 #include "bh1750.h"
+#include "soil_moisture.h"
 #include "motor.h"
 #include "buzzer.h"
 #include <string.h>
@@ -14,6 +15,8 @@ uint8_t Page_Index = 0;   //OLED显示界面 0代表一个界面，目前没有1
 int8_t Current_Temp = 0;  //温度值（支持负数）
 uint8_t Current_Humi = 0;  //湿度值
 uint16_t Current_Lux = 0;  //光照强度（lux）
+uint16_t Current_Soil_ADC = 0;  //土壤湿度 ADC 值
+uint8_t Current_Soil_Moisture = 0;  //土壤湿度（%）
 uint8_t System_Status = 0;  // 0: 正常，1: 警告，2: 告警
 uint8_t Control_Mode = 0;   // 0: 自动模式，1: 手动模式
 
@@ -159,6 +162,24 @@ void BH1750_Task(void)
     Current_Lux = lux;
 }
 
+// ================== 土壤湿度采集任务 ==================
+// 执行周期：1000ms（1秒）
+void Soil_Moisture_Task(void)
+{
+    uint16_t adc_value;
+    uint8_t moisture;
+
+    if (Soil_Moisture_Read(&adc_value, &moisture))
+    {
+        Current_Soil_ADC = adc_value;
+        Current_Soil_Moisture = moisture;
+    }
+    else
+    {
+        printf("[Soil_Moisture_Task] 读取失败\r\n");
+    }
+}
+
 // ================== 串口通信任务 ==================
 // 执行周期：10ms
 void UART_Task(void)
@@ -170,8 +191,8 @@ void UART_Task(void)
     if (report_timer >= 200)
     {
         report_timer = 0;
-        printf("[系统数据] 温度:%d度, 湿度:%d%%, 光照:%d lux, 模式:%s, 状态:%s\r\n",
-               Current_Temp, Current_Humi, Current_Lux,
+        printf("[系统数据] 温度:%d度, 湿度:%d%%, 光照:%d lux, 土壤:%d%%, 模式:%s, 状态:%s\r\n",
+               Current_Temp, Current_Humi, Current_Lux, Current_Soil_Moisture,
                (Control_Mode == 0) ? "自动" : "手动",
                (System_Status == 0) ? "正常" : ((System_Status == 1) ? "警告" : "告警"));
     }
@@ -244,6 +265,7 @@ int main(void)
     UART1_Init(115200);
     SHT30_Init();
     BH1750_Init();
+    Soil_Moisture_Init();
     Motor_Init();           
     Buzzer_Init();          
     OLED_Init();            
@@ -253,9 +275,10 @@ int main(void)
     // 中文启动菜单信息
     printf("==================================\r\n");
     printf(" 系统启动成功\r\n");
-    printf(" 智慧大棚环境监测节点 v2.1\r\n");
+    printf(" 智慧大棚环境监测节点 v2.2\r\n");
     printf(" SHT30温湿度传感器 ... [正常]\r\n");
     printf(" BH1750光照传感器 ... [正常]\r\n");
+    printf(" 土壤湿度传感器 ..... [正常]\r\n");
     printf(" 风扇驱动及蜂鸣器 ..... [正常]\r\n");
     printf(" 串口双向通信接口 ..... [正常]\r\n");
     printf("==================================\r\n");

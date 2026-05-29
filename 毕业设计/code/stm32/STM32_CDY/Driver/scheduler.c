@@ -9,6 +9,7 @@ volatile uint32_t System_Tick = 0;
 // 任务函数在 main.c 中实现，此处声明供任务列表使用
 extern void SHT30_Task(void);          // SHT30 温湿度采集与控制任务
 extern void BH1750_Task(void);         // BH1750 光照采集任务
+extern void Soil_Moisture_Task(void);  // 土壤湿度采集任务
 extern void OLED_Task(void);           // OLED 显示任务
 extern void UART_Task(void);           // 串口通信与指令处理任务
 
@@ -17,10 +18,11 @@ extern void UART_Task(void);           // 串口通信与指令处理任务
 // { 任务函数, 执行周期ms, 初始时间(固定为0) }
 static Task_t Task_List[] =
 {
-    { SHT30_Task,   2000, 0 },   // SHT30 采集与控制：每 2000ms 执行一次
-    { BH1750_Task,  2100, 0 },   // BH1750 光照采集：每 2100ms 执行一次（错开 SHT30，避免 I2C 冲突）
-    { UART_Task,      10, 0 },   // 串口处理：每 10ms 执行一次，处理接收数据
-    { OLED_Task,     100, 0 },   // OLED 显示：每 100ms 执行一次，刷新屏幕
+    { SHT30_Task,           2000, 0 },   // SHT30 采集与控制：每 2000ms 执行一次
+    { BH1750_Task,          2100, 0 },   // BH1750 光照采集：每 2100ms 执行一次（错开 SHT30）
+    { Soil_Moisture_Task,   1000, 0 },   // 土壤湿度采集：每 1000ms 执行一次（不与 I2C 冲突）
+    { UART_Task,              10, 0 },   // 串口处理：每 10ms 执行一次，处理接收数据
+    { OLED_Task,             100, 0 },   // OLED 显示：每 100ms 执行一次，刷新屏幕
 };
 
 // 任务数量自动计算，无需手动修改该变量
