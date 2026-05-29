@@ -177,6 +177,7 @@ void SHT30_Init(void)
         printf("  2. 是否有 4.7kΩ 上拉电阻到 3.3V\r\n");
         printf("  3. SHT30 VCC 是否接 3.3V，GND 是否接地\r\n");
         printf("  4. 用万用表测 PB6/PB7 是否有 3.3V 电压\r\n");
+        printf("  5. 检查 I2C1 是否被其他设备（BH1750）占用\r\n");
     }
 
     printf("[SHT30] ========== 初始化完成 ==========\r\n\r\n");

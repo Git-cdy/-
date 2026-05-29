@@ -51,23 +51,31 @@ void Soil_Moisture_Init(void)
 uint8_t Soil_Moisture_Read(uint16_t *adc_value, uint8_t *moisture)
 {
     int16_t raw_moisture;
+    uint32_t adc_sum = 0;
+    uint8_t i;
 
-    // 启动 ADC 转换
-    ADC_SoftwareStartConvCmd(SOIL_ADC, ENABLE);
-
-    // 等待转换完成（超时保护）
-    uint32_t timeout = 0;
-    while (!ADC_GetFlagStatus(SOIL_ADC, ADC_FLAG_EOC) && timeout < 100000)
-        timeout++;
-
-    if (timeout >= 100000)
+    // 多次采样求平均（减少噪声）
+    for (i = 0; i < 5; i++)
     {
-        printf("[Soil_Moisture] 读取失败：ADC 转换超时\r\n");
-        return 0;
+        // 启动 ADC 转换
+        ADC_SoftwareStartConvCmd(SOIL_ADC, ENABLE);
+
+        // 等待转换完成（超时保护）
+        uint32_t timeout = 0;
+        while (!ADC_GetFlagStatus(SOIL_ADC, ADC_FLAG_EOC) && timeout < 100000)
+            timeout++;
+
+        if (timeout >= 100000)
+        {
+            printf("[Soil_Moisture] 读取失败：ADC 转换超时\r\n");
+            return 0;
+        }
+
+        adc_sum += ADC_GetConversionValue(SOIL_ADC);
     }
 
-    // 读取 ADC 值
-    *adc_value = ADC_GetConversionValue(SOIL_ADC);
+    // 计算平均值
+    *adc_value = adc_sum / 5;
 
     // 转换为湿度百分比
     // 公式：moisture = (adc - dry) / (wet - dry) * 100%
