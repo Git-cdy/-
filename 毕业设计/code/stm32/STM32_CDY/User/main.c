@@ -7,6 +7,7 @@
 #include "soil_moisture.h"
 #include "motor.h"
 #include "buzzer.h"
+#include "relay.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -235,6 +236,12 @@ void UART_Task(void)
     // '3' -> 风扇关闭
     // '4' -> 警报开启
     // '5' -> 警报关闭
+    // '6' -> 继电器 1（风机）开启
+    // '7' -> 继电器 1（风机）关闭
+    // '8' -> 继电器 2（水阀）开启
+    // '9' -> 继电器 2（水阀）关闭
+    // 'a' -> 继电器 3（补光灯）开启
+    // 'b' -> 继电器 3（补光灯）关闭
     // \r, \n, 空格 -> 静默忽略
     // 其他 -> 无效指令
 
@@ -269,6 +276,30 @@ void UART_Task(void)
 				Motor_SetSpeed(0);
         printf(">> 执行成功: 强制切入手动模式，物理警报关闭\r\n");
     }
+    else if (cmd == '6')
+    {
+        Relay_SetState(1, 1);  // 继电器 1 开启
+    }
+    else if (cmd == '7')
+    {
+        Relay_SetState(1, 0);  // 继电器 1 关闭
+    }
+    else if (cmd == '8')
+    {
+        Relay_SetState(2, 1);  // 继电器 2 开启
+    }
+    else if (cmd == '9')
+    {
+        Relay_SetState(2, 0);  // 继电器 2 关闭
+    }
+    else if (cmd == 'a' || cmd == 'A')
+    {
+        Relay_SetState(3, 1);  // 继电器 3 开启
+    }
+    else if (cmd == 'b' || cmd == 'B')
+    {
+        Relay_SetState(3, 0);  // 继电器 3 关闭
+    }
     else if (cmd == '\r' || cmd == '\n' || cmd == ' ')
     {
         // 防干扰：静默忽略回车、换行、空格
@@ -293,20 +324,22 @@ int main(void)
     SHT30_Init();
     BH1750_Init();
     Soil_Moisture_Init();
-    Motor_Init();           
-    Buzzer_Init();          
-    OLED_Init();            
-    OLED_Clear();           
+    Motor_Init();
+    Buzzer_Init();
+    Relay_Init();
+    OLED_Init();
+    OLED_Clear();
     Scheduler_Init();       
 
     // 中文启动菜单信息
     printf("==================================\r\n");
     printf(" 系统启动成功\r\n");
-    printf(" 智慧大棚环境监测节点 v2.2\r\n");
+    printf(" 智慧大棚环境监测节点 v2.3\r\n");
     printf(" SHT30温湿度传感器 ... [正常]\r\n");
     printf(" BH1750光照传感器 ... [正常]\r\n");
     printf(" 土壤湿度传感器 ..... [正常]\r\n");
     printf(" 风扇驱动及蜂鸣器 ..... [正常]\r\n");
+    printf(" 4路继电器控制 ...... [正常]\r\n");
     printf(" 串口双向通信接口 ..... [正常]\r\n");
     printf("==================================\r\n");
 

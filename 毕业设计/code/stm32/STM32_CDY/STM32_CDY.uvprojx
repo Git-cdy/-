@@ -604,6 +604,11 @@
               <FileType>1</FileType>
               <FilePath>.\Driver\soil_moisture.c</FilePath>
             </File>
+            <File>
+              <FileName>relay.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Driver\relay.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
