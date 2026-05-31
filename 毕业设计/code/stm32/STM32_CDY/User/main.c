@@ -12,7 +12,7 @@
 #include <stdio.h>
 
 // ================== 全局变量定义 ==================
-uint8_t Page_Index = 0;   //OLED显示界面 0代表一个界面，目前没有1
+uint8_t Page_Index = 1;   //OLED显示界面 0代表一个界面，目前没有1
 int8_t Current_Temp = 0;  //温度值（支持负数）
 uint8_t Current_Humi = 0;  //湿度值
 uint16_t Current_Lux = 0;  //光照强度（lux）
@@ -101,55 +101,138 @@ void SHT30_Task(void)
 
 // ================== OLED 显示任务 ==================
 // 执行周期：100ms
+// M5 大棚版3页显示（每页都有"智慧大棚"居中）：
+// 第0页：智慧大棚 / 温度:xx℃ / 湿度:xx% / 状态:正常/警告/告警
+// 第1页：智慧大棚 / 光照:xxxxx lux / 土壤:xx% / 状态:正常/警告/告警
+// 第2页：智慧大棚 / 风机:[ ] / 水阀:[ ] / 补光:[ ]
 void OLED_Task(void)
 {
     switch (Page_Index)
     {
         case 0:
-            // -------- 第一行：居中显示 == 智慧大棚 == --------
-            OLED_ShowString(1, 1, "== ");
-            OLED_ShowChinese(1, 4, "智慧大棚");
-            OLED_ShowString(1, 12, " ==");
+            // -------- 第0页：温度、湿度、状态 --------
+            // 第一行：智慧大棚（居中）
+            OLED_ShowChinese(1, 5, "智慧大棚");
 
-            // -------- 第二行：温度 : xx C 或 ERR --------
-            OLED_ShowChinese(2, 1, "温度");
-            OLED_ShowString(2, 5, " : ");
+            // 第二行：温度
+            OLED_ShowChinese(2, 1, "温");
+            OLED_ShowChinese(2, 3, "度");
+            OLED_ShowString(2, 5, ":");
             if (SHT30_Error)
             {
-                OLED_ShowString(2, 8, "ERR ");
+                OLED_ShowString(2, 6, "ERR");
             }
             else
             {
                 if (Current_Temp < 0)
                 {
-                    OLED_ShowString(2, 8, "-");
-                    OLED_ShowNum(2, 9, -Current_Temp, 2);
+                    OLED_ShowString(2, 6, "-");
+                    OLED_ShowNum(2, 7, -Current_Temp, 2);
                 }
                 else
                 {
-                    OLED_ShowNum(2, 8, Current_Temp, 2);
+                    OLED_ShowNum(2, 6, Current_Temp, 2);
                 }
-                OLED_ShowString(2, 11, " C  ");
+                OLED_ShowString(2, 8, "C");
             }
 
-            // -------- 第三行：湿度 : xx % 或 ERR --------
-            OLED_ShowChinese(3, 1, "湿度");
-            OLED_ShowString(3, 5, " : ");
+            // 第三行：湿度
+            OLED_ShowChinese(3, 1, "湿");
+            OLED_ShowChinese(3, 3, "度");
+            OLED_ShowString(3, 5, ":");
             if (SHT30_Error)
             {
-                OLED_ShowString(3, 8, "ERR ");
+                OLED_ShowString(3, 6, "ERR");
             }
             else
             {
-                OLED_ShowNum(3, 8, Current_Humi, 2);
-                OLED_ShowString(3, 11, " %  ");
+                OLED_ShowNum(3, 6, Current_Humi, 2);
+                OLED_ShowString(3, 8, "%");
             }
 
-            // -------- 第四行：光照 : xxxxx lux --------
-            OLED_ShowChinese(4, 1, "光照");
-            OLED_ShowString(4, 5, " : ");
-            OLED_ShowNum(4, 8, Current_Lux, 5);
-            OLED_ShowString(4, 13, " ");
+            // 第四行：状态
+            OLED_ShowChinese(4, 1, "状");
+            OLED_ShowChinese(4, 3, "态");
+            OLED_ShowString(4, 5, ":");
+            if (System_Status == 0)
+            {
+                OLED_ShowChinese(4, 6, "正");
+                OLED_ShowChinese(4, 8, "常");
+            }
+            else if (System_Status == 1)
+            {
+                OLED_ShowChinese(4, 6, "警");
+                OLED_ShowChinese(4, 8, "告");
+            }
+            else
+            {
+                OLED_ShowChinese(4, 6, "告");
+                OLED_ShowChinese(4, 8, "警");
+            }
+            break;
+
+        case 1:
+            // -------- 第1页：光照、土壤、状态 --------
+            // 第一行：智慧大棚（居中）
+						OLED_ShowChinese(1, 5, "智慧大棚");
+
+            // 第二行：光照
+            OLED_ShowChinese(2, 1, "光");
+            OLED_ShowChinese(2, 3, "照");
+            OLED_ShowString(2, 5, ":");
+            OLED_ShowNum(2, 6, Current_Lux, 5);
+            OLED_ShowString(2, 11, "lux");
+
+            // 第三行：土壤
+            OLED_ShowChinese(3, 1, "土");
+            OLED_ShowChinese(3, 3, "壤");
+            OLED_ShowString(3, 5, ":");
+            OLED_ShowNum(3, 6, Current_Soil_Moisture, 2);
+            OLED_ShowString(3, 8, "%");
+
+            // 第四行：状态
+            OLED_ShowChinese(4, 1, "状");
+            OLED_ShowChinese(4, 3, "态");
+            OLED_ShowString(4, 5, ":");
+            if (System_Status == 0)
+            {
+                OLED_ShowChinese(4, 6, "正");
+                OLED_ShowChinese(4, 8, "常");
+            }
+            else if (System_Status == 1)
+            {
+                OLED_ShowChinese(4, 6, "警");
+                OLED_ShowChinese(4, 8, "告");
+            }
+            else
+            {
+                OLED_ShowChinese(4, 6, "告");
+                OLED_ShowChinese(4, 8, "警");
+            }
+            break;
+
+        case 2:
+            // -------- 第2页：继电器状态 --------
+            // 第一行：智慧大棚（居中）
+            OLED_ShowChinese(1, 5, "智慧大棚");
+
+            // 第二行：风机
+            OLED_ShowChinese(2, 1, "风");
+            OLED_ShowChinese(2, 3, "机");
+            OLED_ShowString(2, 5, ":[");
+            OLED_ShowString(2, 7, "]");
+
+            // 第三行：水阀
+            OLED_ShowChinese(3, 1, "水");
+            OLED_ShowChinese(3, 3, "阀");
+            OLED_ShowString(3, 5, ":[");
+            OLED_ShowString(3, 7, "]");
+
+            // 第四行：补光
+            OLED_ShowChinese(4, 1, "补");
+            OLED_ShowChinese(4, 3, "光");
+            OLED_ShowString(4, 5, ":[");
+            OLED_ShowString(4, 7, "]");
             break;
 
         default:
