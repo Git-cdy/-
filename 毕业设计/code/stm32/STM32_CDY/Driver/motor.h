@@ -3,7 +3,7 @@
 
 #include "stm32f10x.h"
 
-// ================== 鐢垫満 PWM 鎺у埗鎺ュ彛 ==================
+// ================== 电机 PWM 控制接口 ==================
 void Motor_Init(void);
 void Motor_SetSpeed(uint8_t speed);
 
