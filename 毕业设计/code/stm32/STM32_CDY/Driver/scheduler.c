@@ -13,6 +13,7 @@ extern void Soil_Moisture_Task(void);  // 土壤湿度采集任务
 extern void OLED_Task(void);           // OLED 显示任务
 extern void K210_FrameRx_Task(void); // K210 UART2 帧接收处理任务
 extern void UART_Task(void);           // 串口通信与指令处理任务
+extern void ESP8266_Task(void);        // ESP8266 云平台通信任务
 
 // ================== 任务列表 ==================
 // 在此配置所有需要执行的任务，每行一个
@@ -25,6 +26,7 @@ static Task_t Task_List[] =
     { UART_Task,              10, 0 },   // 串口处理：每 10ms 执行一次，处理接收数据
     { OLED_Task,             100, 0 },   // OLED 显示：每 100ms 执行一次，刷新屏幕
     { K210_FrameRx_Task,       50, 0 },   // K210 帧接收：每 50ms 排空 UART2 环形缓冲区
+    { ESP8266_Task,       10000, 0 },   // ESP8266 云平台上报：每 10 秒上传一次
 };
 
 // 任务数量自动计算，无需手动修改该变量

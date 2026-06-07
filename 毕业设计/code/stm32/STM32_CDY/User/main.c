@@ -9,6 +9,7 @@
 #include "motor.h"
 #include "buzzer.h"
 #include "relay.h"
+#include "esp8266.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -30,6 +31,17 @@ uint8_t K210_Confidence = 0;
 uint32_t K210_LastRxTime = 0;
 #define K210_TIMEOUT_MS  5000
 
+// 病害中文名查找
+static const char* K210_DiseaseNames[] = {
+    "",          // 0x00 - 未使用
+    "早疫病",    // 0x01 - 早疫病
+    "晚疫病",    // 0x02 - 晚疫病
+    "叶斑病",    // 0x03 - 叶斑病
+    "健康",      // 0x04 - 健康
+};
+static uint8_t K210_FrameCount = 0;
+static uint8_t K210_ErrorCount = 0;
+
 // K210 UART frame receiver task (called every 50ms by scheduler)
 void K210_FrameRx_Task(void)
 {
@@ -42,19 +54,32 @@ void K210_FrameRx_Task(void)
             K210Frame_t *frame = Frame_Receiver_GetFrame(&K210_FrameRx);
             if (frame)
             {
-                K210_DiseaseType = frame->disease_type;
-                K210_Confidence = frame->confidence;
+                K210_DiseaseType = frame->data.disease_type;
+                K210_Confidence = frame->data.confidence;
                 K210_LastRxTime = System_Tick;
-                printf("[K210] OK\r\n");
+                K210_FrameCount++;
+                
+                // 打印中文病害识别结果
+                if (K210_DiseaseType <= 0x04)
+                {
+                    printf("[K210] 识别: %s, 置信度:%d%%\r\n",
+                           K210_DiseaseNames[K210_DiseaseType], K210_Confidence);
+                }
+                else
+                {
+                    printf("[K210] 未知病害类型 0x%02X\r\n", K210_DiseaseType);
+                }
                 Frame_Receiver_ClearFlag(&K210_FrameRx);
             }
         }
     }
-    static uint8_t timeout_flag = 0;
+    
+    // 超时检测（静默，避免刷屏）
     if (System_Tick - K210_LastRxTime > K210_TIMEOUT_MS)
     {
-        if (!timeout_flag) { printf("[K210] timeout\r\n"); timeout_flag = 1; }
-    } else { timeout_flag = 0; }
+        K210_ErrorCount++;
+        K210_LastRxTime = System_Tick;
+    }
 }
 
 // ================== SHT30 采集与控制任务 ==================
@@ -326,14 +351,18 @@ void UART_Task(void)
         report_timer = 0;
         if (SHT30_Error)
         {
-            printf("[系统数据] 温度:ERR, 湿度:ERR, 光照:%d lux, 土壤:%d%%, 模式:%s, 状态:传感器故障\r\n",
+            printf("[系统数据] 温度:ERR, 湿度:ERR, 光照:%d lux, 土壤:%d%%, 病害:%s(%d%%), 模式:%s, 状态:传感器故障\r\n",
                    Current_Lux, Current_Soil_Moisture,
+                   (K210_DiseaseType <= 0x04) ? K210_DiseaseNames[K210_DiseaseType] : "?",
+                   K210_Confidence,
                    (Control_Mode == 0) ? "自动" : "手动");
         }
         else
         {
-            printf("[系统数据] 温度:%d度, 湿度:%d%%, 光照:%d lux, 土壤:%d%%, 模式:%s, 状态:%s\r\n",
+            printf("[系统数据] 温度:%d度, 湿度:%d%%, 光照:%d lux, 土壤:%d%%, 病害:%s(%d%%), 模式:%s, 状态:%s\r\n",
                    Current_Temp, Current_Humi, Current_Lux, Current_Soil_Moisture,
+                   (K210_DiseaseType <= 0x04) ? K210_DiseaseNames[K210_DiseaseType] : "?",
+                   K210_Confidence,
                    (Control_Mode == 0) ? "自动" : "手动",
                    (System_Status == 0) ? "正常" : ((System_Status == 1) ? "警告" : "告警"));
         }
@@ -392,27 +421,27 @@ void UART_Task(void)
     }
     else if (cmd == '6')
     {
-        Relay_SetState(1, 1);  // 继电器 1 开启
+        Relay_SetState(1, 1);  printf(">> 风机已开启\r\n");
     }
     else if (cmd == '7')
     {
-        Relay_SetState(1, 0);  // 继电器 1 关闭
+        Relay_SetState(1, 0);  printf(">> 风机已关闭\r\n");
     }
     else if (cmd == '8')
     {
-        Relay_SetState(2, 1);  // 继电器 2 开启
+        Relay_SetState(2, 1);  printf(">> 水阀已开启\r\n");
     }
     else if (cmd == '9')
     {
-        Relay_SetState(2, 0);  // 继电器 2 关闭
+        Relay_SetState(2, 0);  printf(">> 水阀已关闭\r\n");
     }
     else if (cmd == 'a' || cmd == 'A')
     {
-        Relay_SetState(3, 1);  // 继电器 3 开启
+        Relay_SetState(3, 1);  printf(">> 补光灯已开启\r\n");
     }
     else if (cmd == 'b' || cmd == 'B')
     {
-        Relay_SetState(3, 0);  // 继电器 3 关闭
+        Relay_SetState(3, 0);  printf(">> 补光灯已关闭\r\n");
     }
     else if (cmd == '\r' || cmd == '\n' || cmd == ' ')
     {
@@ -427,6 +456,54 @@ void UART_Task(void)
     UART1_ClearRxFlag();
 }
 
+// ================== ESP8266 云平台通信任务 ==================
+void ESP8266_Task(void)
+{
+    static uint8_t mqtt_ok = 0;
+    char json[256];
+    
+    if (!ESP8266_IsConnected())
+    {
+        mqtt_ok = 0;
+        printf("[ESP8266_Task] 连接WiFi...\r\n");
+        if (ESP8266_ConnectWiFi())
+        {
+            printf("[ESP8266_Task] WiFi已连接，连接MQTT...\r\n");
+            if (ESP8266_ConnectMQTT())
+            {
+                mqtt_ok = 1;
+                printf("[ESP8266_Task] 云平台就绪！\r\n");
+            }
+            else
+            {
+                printf("[ESP8266_Task] MQTT连接失败\r\n");
+            }
+        }
+        else
+        {
+            printf("[ESP8266_Task] WiFi连接失败\r\n");
+        }
+        return;
+    }
+    
+    // 上报数据
+    sprintf(json,
+        "{\"temperature\":%d,\"humidity\":%d,\"light\":%d,\"soil\":%d,"
+        "\"disease\":%d,\"confidence\":%d,\"status\":%d,\"mode\":%d}",
+        Current_Temp, Current_Humi, Current_Lux, Current_Soil_Moisture,
+        K210_DiseaseType, K210_Confidence,
+        System_Status, Control_Mode);
+    
+    if (ESP8266_PublishData(json))
+    {
+        printf("[ESP8266_Task] 数据上报成功\r\n");
+    }
+    else
+    {
+        printf("[ESP8266_Task] 数据上报失败，尝试重连...\r\n");
+        mqtt_ok = 0;
+    }
+}// ================== 主程序 ==================
 // ================== 主程序 ==================
 int main(void)
 {
@@ -445,7 +522,8 @@ int main(void)
     Relay_Init();
     OLED_Init();
     OLED_Clear();
-    Scheduler_Init();       
+    Scheduler_Init();
+    ESP8266_Init();       
 
     // 中文启动菜单信息
     printf("==================================\r\n");
@@ -458,7 +536,8 @@ int main(void)
     printf(" 4路继电器控制 ...... [正常]\r\n");
     printf(" 串口双向通信接口 ..... [正常]\r\n");
     printf(" K210 UART2 接口 .... [正常]\r\n");
-    printf("[wait] K210 data...\r\n");
+    printf(" K210病虫害识别 .... [等待数据...]\r\n");
+    printf(" ESP8266云平台通信 .... [初始化中...]\r\n");
     printf("==================================\r\n");
 
     while (1)

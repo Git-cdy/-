@@ -6,7 +6,7 @@
 static void I2C_Delay_ms(uint32_t ms)
 {
     uint32_t i, j;
-    for (i = 0; i < ms; i++)
+        for (j = 0; j < 6000; j++);  // 校准至约 1ms（72MHz, -O0）
         for (j = 0; j < 123; j++);  // 约 1ms（72MHz 时钟）
 }
 
@@ -90,11 +90,31 @@ uint8_t BH1750_Read_Lux(uint16_t *lux)
     // 检查 I2C 总线是否被卡住
     if (I2C_GetFlagStatus(BH1750_I2C, I2C_FLAG_BUSY))
     {
-        printf("[BH1750] I2C 总线被卡住，尝试恢复...\r\n");
+        printf("[BH1750] I2C BUSY - GPIO recovery...\r\n");
         I2C_Cmd(BH1750_I2C, DISABLE);
-        I2C_Delay_ms(10);
+        {
+            GPIO_InitTypeDef g;
+            g.GPIO_Pin   = GPIO_Pin_6 | GPIO_Pin_7;
+            g.GPIO_Mode  = GPIO_Mode_Out_OD;
+            g.GPIO_Speed = GPIO_Speed_50MHz;
+            GPIO_Init(GPIOB, &g);
+            GPIO_SetBits(GPIOB, GPIO_Pin_7);
+            for (int k = 0; k < 16; k++)
+            {
+                GPIO_ResetBits(GPIOB, GPIO_Pin_6); I2C_Delay_ms(1);
+                GPIO_SetBits(GPIOB, GPIO_Pin_6);   I2C_Delay_ms(1);
+                if (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)) break;
+            }
+            GPIO_ResetBits(GPIOB, GPIO_Pin_6); I2C_Delay_ms(1);
+            GPIO_ResetBits(GPIOB, GPIO_Pin_7); I2C_Delay_ms(1);
+            GPIO_SetBits(GPIOB, GPIO_Pin_6);   I2C_Delay_ms(1);
+            GPIO_SetBits(GPIOB, GPIO_Pin_7);   I2C_Delay_ms(1);
+            g.GPIO_Mode = GPIO_Mode_AF_OD;
+            GPIO_Init(GPIOB, &g);
+        }
         I2C_Cmd(BH1750_I2C, ENABLE);
         I2C_Delay_ms(10);
+        printf("[BH1750] I2C recovery done\r\n");
     }
 
     // 发送测量命令（连续高分辨率模式）

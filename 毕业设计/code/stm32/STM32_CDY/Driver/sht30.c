@@ -143,12 +143,31 @@ uint8_t SHT30_Read_Data(int8_t *temp, uint8_t *humi)
     // 检查 I2C 总线是否被卡住
     if (I2C_GetFlagStatus(SHT30_I2C, I2C_FLAG_BUSY))
     {
-        printf("[SHT30] I2C 总线被卡住，尝试恢复...\r\n");
-        // 禁用 I2C，重新初始化
+        printf("[SHT30] I2C BUSY - GPIO recovery...\r\n");
         I2C_Cmd(SHT30_I2C, DISABLE);
-        I2C_Delay_ms(10);
+        {
+            GPIO_InitTypeDef g;
+            g.GPIO_Pin   = GPIO_Pin_6 | GPIO_Pin_7;
+            g.GPIO_Mode  = GPIO_Mode_Out_OD;
+            g.GPIO_Speed = GPIO_Speed_50MHz;
+            GPIO_Init(GPIOB, &g);
+            GPIO_SetBits(GPIOB, GPIO_Pin_7);
+            for (int k = 0; k < 16; k++)
+            {
+                GPIO_ResetBits(GPIOB, GPIO_Pin_6); I2C_Delay_ms(1);
+                GPIO_SetBits(GPIOB, GPIO_Pin_6);   I2C_Delay_ms(1);
+                if (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)) break;
+            }
+            GPIO_ResetBits(GPIOB, GPIO_Pin_6); I2C_Delay_ms(1);
+            GPIO_ResetBits(GPIOB, GPIO_Pin_7); I2C_Delay_ms(1);
+            GPIO_SetBits(GPIOB, GPIO_Pin_6);   I2C_Delay_ms(1);
+            GPIO_SetBits(GPIOB, GPIO_Pin_7);   I2C_Delay_ms(1);
+            g.GPIO_Mode = GPIO_Mode_AF_OD;
+            GPIO_Init(GPIOB, &g);
+        }
         I2C_Cmd(SHT30_I2C, ENABLE);
         I2C_Delay_ms(10);
+        printf("[SHT30] I2C recovery done\r\n");
     }
 
     // 发送起始条件

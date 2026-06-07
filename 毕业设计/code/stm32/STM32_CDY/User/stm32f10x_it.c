@@ -159,4 +159,15 @@ void PendSV_Handler(void)
   */ 
 
 
+/**
+  * @brief  This function handles USART3 global interrupt (ESP8266).
+  * @param  None
+  * @retval None
+  */
+void USART3_IRQHandler(void)
+{
+    extern void ESP8266_UART3_IRQHandler(void);
+    ESP8266_UART3_IRQHandler();
+}
+
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/
