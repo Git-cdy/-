@@ -311,7 +311,6 @@ def main():
             try:
                 img_lcd = img.copy()
                 # 绘制黑色背景框
-                img_lcd.draw_rectangle(0, 0, 160, 72, color=(0, 0, 0), fill=True)
 
                 # 显示调试参数或"未检测到叶子"
                 if Debug_NoLeaf:

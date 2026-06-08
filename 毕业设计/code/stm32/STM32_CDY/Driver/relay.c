@@ -18,7 +18,7 @@ void Relay_Init(void)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(RELAY_PORT, &GPIO_InitStructure);
 
-    // 初始化：所有继电器关闭（高电平）
+    // 初始化：所有继电器关闭（输出高电平，模块低电平触发）
     RELAY1_OFF();
     RELAY2_OFF();
     RELAY3_OFF();

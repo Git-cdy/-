@@ -38,7 +38,7 @@ uint8_t Frame_Receiver_Feed(FrameReceiver_t *rx, uint8_t byte)
             else
             {
                 // 无效类型，回到同步状态
-                printf("[帧接收] 无效病害类型: 0x%02X\r\n", byte);
+        // printf("[帧接收] 无效病害类型: 0x%02X\r\n", byte);
                 rx->state = FRAME_STATE_SYNC;
             }
             break;
@@ -59,17 +59,21 @@ uint8_t Frame_Receiver_Feed(FrameReceiver_t *rx, uint8_t byte)
                 // 校验通过
                 rx->frame_ready = 1;
                 rx->success_count++;
-                printf("[帧接收] OK: 病害=0x%02X, 置信度=%d%%\r\n",
-                       rx->frame.data.disease_type,
-                       rx->frame.data.confidence);
+/*
+    printf("[帧接收] OK: 病害=0x%02X, 置信度=%d%%\r\n",
+    rx->frame.data.disease_type,
+    rx->frame.data.confidence);
+    */
             }
             else
             {
                 // 校验失败
                 rx->error_count++;
-                printf("[帧接收] 校验失败: 期望=0x%02X, 实际=0x%02X\r\n",
-                       expected_checksum,
-                       rx->frame.checksum);
+/*
+    printf("[帧接收] 校验失败: 期望=0x%02X, 实际=0x%02X\r\n",
+    expected_checksum,
+    rx->frame.checksum);
+    */
             }
 
             // 回到等待同步状态

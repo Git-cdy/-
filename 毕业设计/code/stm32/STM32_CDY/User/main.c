@@ -115,18 +115,21 @@ void SHT30_Task(void)
     {
         if (Current_Temp >= 35)       // 告警阈值 35℃
         {
+            Relay_SetState(1, 1);   // 风机继电器 ON
             Motor_SetSpeed(100);
             Buzzer_On();
             System_Status = 2;
         }
         else if (Current_Temp >= 30)  // 警告阈值 30℃
         {
+            Relay_SetState(1, 1);   // 风机继电器 ON
             Motor_SetSpeed(60);
             Buzzer_Off();
             System_Status = 1;
         }
         else
         {
+            Relay_SetState(1, 0);   // 风机继电器 OFF
             Motor_SetSpeed(0);
             Buzzer_Off();
             System_Status = 0;
@@ -318,6 +321,15 @@ void BH1750_Task(void)
     }
 
     Current_Lux = lux;
+
+    // 自动补光：光照 < 100 lux 开灯，> 500 lux 关灯
+    if (Control_Mode == 0)
+    {
+        if (Current_Lux < 100)
+            Relay_SetState(3, 1);
+        else if (Current_Lux > 500)
+            Relay_SetState(3, 0);
+    }
 }
 
 // ================== 土壤湿度采集任务 ==================
@@ -331,6 +343,15 @@ void Soil_Moisture_Task(void)
     {
         Current_Soil_ADC = adc_value;
         Current_Soil_Moisture = moisture;
+
+        // 自动浇水：土壤湿度 < 20% 开水阀，> 50% 关水阀
+        if (Control_Mode == 0)
+        {
+            if (Current_Soil_Moisture < 20)
+                Relay_SetState(2, 1);
+            else if (Current_Soil_Moisture > 50)
+                Relay_SetState(2, 0);
+        }
     }
     else
     {
@@ -443,6 +464,18 @@ void UART_Task(void)
     {
         Relay_SetState(3, 0);  printf(">> 补光灯已关闭\r\n");
     }
+    else if (cmd == '+')
+    {
+        Page_Index = (Page_Index + 1) % 3;
+        OLED_Clear();
+        printf(">> 切换至 OLED 第%d页\r\n", Page_Index);
+    }
+    else if (cmd == '-')
+    {
+        Page_Index = (Page_Index == 0) ? 2 : (Page_Index - 1);
+        OLED_Clear();
+        printf(">> 切换至 OLED 第%d页\r\n", Page_Index);
+    }
     else if (cmd == '\r' || cmd == '\n' || cmd == ' ')
     {
         // 防干扰：静默忽略回车、换行、空格
@@ -459,19 +492,16 @@ void UART_Task(void)
 // ================== ESP8266 云平台通信任务 ==================
 void ESP8266_Task(void)
 {
-    static uint8_t mqtt_ok = 0;
     char json[256];
     
     if (!ESP8266_IsConnected())
     {
-        mqtt_ok = 0;
         printf("[ESP8266_Task] 连接WiFi...\r\n");
         if (ESP8266_ConnectWiFi())
         {
             printf("[ESP8266_Task] WiFi已连接，连接MQTT...\r\n");
             if (ESP8266_ConnectMQTT())
             {
-                mqtt_ok = 1;
                 printf("[ESP8266_Task] 云平台就绪！\r\n");
             }
             else
@@ -486,13 +516,30 @@ void ESP8266_Task(void)
         return;
     }
     
-    // 上报数据
-    sprintf(json,
-        "{\"temperature\":%d,\"humidity\":%d,\"light\":%d,\"soil\":%d,"
-        "\"disease\":%d,\"confidence\":%d,\"status\":%d,\"mode\":%d}",
-        Current_Temp, Current_Humi, Current_Lux, Current_Soil_Moisture,
-        K210_DiseaseType, K210_Confidence,
-        System_Status, Control_Mode);
+    // 上报数据（UTF-8 JSON，MQTTX 可正确显示中文）
+    {
+        // UTF-8 编码的病害名
+        static const char* disease_names_utf8[] = {
+            "",
+            "\xE6\x97\xA9\xE7\x96\xAB\xE7\x97\x85",
+            "\xE6\x99\x9A\xE7\x96\xAB\xE7\x97\x85",
+            "\xE5\x8F\xB6\xE6\x96\x91\xE7\x97\x85",
+            "\xE5\x81\xA5\xE5\xBA\xB7",
+        };
+        const char* disease_name = (K210_DiseaseType <= 0x04 && K210_DiseaseType >= 0x01) 
+            ? disease_names_utf8[K210_DiseaseType] : "\xE6\x9C\xAA\xE7\x9F\xA5";
+        const char* mode_name = (Control_Mode == 0) ? "\xE8\x87\xAA\xE5\x8A\xA8" : "\xE6\x89\x8B\xE5\x8A\xA8";
+        const char* status_name = (System_Status == 0) ? "\xE6\xAD\xA3\xE5\xB8\xB8" 
+            : ((System_Status == 1) ? "\xE8\xAD\xA6\xE5\x91\x8A" : "\xE5\x91\x8A\xE8\xAD\xA6");
+        sprintf(json,
+            "{\"\xE6\xB8\xA9\xE5\xBA\xA6\":%d,\"\xE6\xB9\xBF\xE5\xBA\xA6\":%d,"
+            "\"\xE5\x85\x89\xE7\x85\xA7\":%d,\"\xE5\x9C\x9F\xE5\xA3\xA4\":%d,"
+            "\"\xE7\x97\x85\xE5\xAE\xB3\":\"%s\",\"\xE7\xBD\xAE\xE4\xBF\xA1\xE5\xBA\xA6\":%d,"
+            "\"\xE7\x8A\xB6\xE6\x80\x81\":\"%s\",\"\xE6\xA8\xA1\xE5\xBC\x8F\":\"%s\"}",
+            Current_Temp, Current_Humi, Current_Lux, Current_Soil_Moisture,
+            disease_name, K210_Confidence,
+            status_name, mode_name);
+    }
     
     if (ESP8266_PublishData(json))
     {
@@ -501,7 +548,6 @@ void ESP8266_Task(void)
     else
     {
         printf("[ESP8266_Task] 数据上报失败，尝试重连...\r\n");
-        mqtt_ok = 0;
     }
 }// ================== 主程序 ==================
 // ================== 主程序 ==================
