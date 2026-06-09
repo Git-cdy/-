@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>\u667a\u6167\u5927\u68da</title>
+<title>智慧大棚</title>
 <style>
 :root{--bg:#0a1a0f;--card:rgba(18,42,28,0.85);--g:#4ade80;--a:#fbbf24;--r:#f87171;--b:#60a5fa;--t:#d1d5db;--td:#9ca3af;--br:rgba(74,222,128,0.15)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -58,48 +58,48 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
 </head>
 <body>
 <div class="app">
-<div class="header"><span class="icon">🌿</span><h1>\u667a\u6167\u5927\u68da\u76d1\u6d4b</h1><div class="sub" id="timeDisplay">--</div></div>
-<div class="sbar"><span class="sdot" id="statusDot"></span><span id="statusText">\u8fde\u63a5\u4e2d...</span><span class="live" style="color:var(--g);font-size:10px;display:none" id="liveIndicator">● LIVE</span></div>
+<div class="header"><span class="icon">🌿</span><h1>智慧大棚监测</h1><div class="sub" id="timeDisplay">--</div></div>
+<div class="sbar"><span class="sdot" id="statusDot"></span><span id="statusText">连接中...</span><span class="live" style="color:var(--g);font-size:10px;display:none" id="liveIndicator">● LIVE</span></div>
 <div class="grid">
-<div class="card"><span class="ci">🌡️</span><div class="cl">\u6e29\u5ea6</div><div class="cv" style="color:#fbbf24" id="valTemp">--</div><div class="cu">°C</div><div class="cbar"><div class="cbf temp" id="barTemp" style="width:0%"></div></div></div>
-<div class="card"><span class="ci">💧</span><div class="cl">\u6e7f\u5ea6</div><div class="cv" style="color:#60a5fa" id="valHumi">--</div><div class="cu">%</div><div class="cbar"><div class="cbf humi" id="barHumi" style="width:0%"></div></div></div>
-<div class="card"><span class="ci">☀️</span><div class="cl">\u5149\u7167</div><div class="cv" style="color:#fbbf24" id="valLight">--</div><div class="cu">lux</div><div class="cbar"><div class="cbf lux" id="barLight" style="width:0%"></div></div></div>
-<div class="card"><span class="ci">🌱</span><div class="cl">\u571f\u58e4\u6e7f\u5ea6</div><div class="cv" style="color:#a78bfa" id="valSoil">--</div><div class="cu">%</div><div class="cbar"><div class="cbf soil" id="barSoil" style="width:0%"></div></div></div>
+<div class="card"><span class="ci">🌡️</span><div class="cl">温度</div><div class="cv" style="color:#fbbf24" id="valTemp">--</div><div class="cu">°C</div><div class="cbar"><div class="cbf temp" id="barTemp" style="width:0%"></div></div></div>
+<div class="card"><span class="ci">💧</span><div class="cl">湿度</div><div class="cv" style="color:#60a5fa" id="valHumi">--</div><div class="cu">%</div><div class="cbar"><div class="cbf humi" id="barHumi" style="width:0%"></div></div></div>
+<div class="card"><span class="ci">☀️</span><div class="cl">光照</div><div class="cv" style="color:#fbbf24" id="valLight">--</div><div class="cu">lux</div><div class="cbar"><div class="cbf lux" id="barLight" style="width:0%"></div></div></div>
+<div class="card"><span class="ci">🌱</span><div class="cl">土壤湿度</div><div class="cv" style="color:#a78bfa" id="valSoil">--</div><div class="cu">%</div><div class="cbar"><div class="cbf soil" id="barSoil" style="width:0%"></div></div></div>
 </div>
-<div class="dcard" id="diseaseCard"><span class="di" id="diseaseIcon">🔬</span><div class="dinfo"><div class="dn" id="diseaseName">\u7b49\u5f85\u6570\u636e...</div><div class="dc" id="diseaseConf"></div></div><span class="db ok" id="diseaseBadge">--</span></div>
-<div class="srow"><div class="chip"><div class="chl">\u63a7\u5236\u6a21\u5f0f</div><div id="chipMode" style="color:#4ade80">--</div></div><div class="chip"><div class="chl">\u7cfb\u7edf\u72b6\u6001</div><div id="chipStatus" style="color:#4ade80">--</div></div></div>
-<div class="foot">EMQX Cloud · \u68a7\u5dde\u5b66\u9662 23\u901a\u4fe1\u5de5\u7a0b \u9648\u5fb7\u6e90</div>
+<div class="dcard" id="diseaseCard"><span class="di" id="diseaseIcon">🔬</span><div class="dinfo"><div class="dn" id="diseaseName">等待数据...</div><div class="dc" id="diseaseConf"></div></div><span class="db ok" id="diseaseBadge">--</span></div>
+<div class="srow"><div class="chip"><div class="chl">控制模式</div><div id="chipMode" style="color:#4ade80">--</div></div><div class="chip"><div class="chl">系统状态</div><div id="chipStatus" style="color:#4ade80">--</div></div></div>
+<div class="foot">EMQX Cloud · 梧州学院 23通信工程 陈德源</div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 <script>
 (function(){
 var B='b3ae3f1a.ala.cn-shenzhen.emqxsl.cn',P=8084,PT='/mqtt',U='cdy',PW='20050416oK',TP='greenhouse/sensor',CI='web_'+Math.random().toString(16).slice(2,10);
 var DM={};
-DM['\u65e9\u75ab\u75c5']={n:'\u65e9\u75ab\u75c5',c:'bad',i:'🦠'};
-DM['\u665a\u75ab\u75c5']={n:'\u665a\u75ab\u75c5',c:'bad',i:'🦠'};
-DM['\u53f6\u6591\u75c5']={n:'\u53f6\u6591\u75c5',c:'warn',i:'🍂'};
-DM['\u5065\u5eb7']={n:'\u5065\u5eb7',c:'ok',i:'✅'};
-DM['\u672a\u77e5']={n:'\u672a\u77e5',c:'warn',i:'❓'};
+DM['早疫病']={n:'早疫病',c:'bad',i:'🦠'};
+DM['晚疫病']={n:'晚疫病',c:'bad',i:'🦠'};
+DM['叶斑病']={n:'叶斑病',c:'warn',i:'🍂'};
+DM['健康']={n:'健康',c:'ok',i:'✅'};
+DM['未知']={n:'未知',c:'warn',i:'❓'};
 function $(id){return document.getElementById(id);}
 var E={time:$('timeDisplay'),dot:$('statusDot'),text:$('statusText'),live:$('liveIndicator'),temp:$('valTemp'),humi:$('valHumi'),light:$('valLight'),soil:$('valSoil'),barTemp:$('barTemp'),barHumi:$('barHumi'),barLight:$('barLight'),barSoil:$('barSoil'),dName:$('diseaseName'),dConf:$('diseaseConf'),dIcon:$('diseaseIcon'),dBadge:$('diseaseBadge'),dCard:$('diseaseCard'),mode:$('chipMode'),status:$('chipStatus')};
 function ut(){var d=new Date();E.time.textContent=d.toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});}
 ut();setInterval(ut,1000);
 function ss(on,msg){E.dot.className='sdot '+(on?'on':'off');E.text.textContent=msg;E.live.style.display=on?'inline':'none';}
 var cl=new Paho.MQTT.Client(B,P,PT,CI);
-cl.onConnectionLost=function(){ss(false,'\u65ad\u5f00\uff0c\u91cd\u8fde\u4e2d...');setTimeout(function(){cl.connect({userName:U,password:PW,useSSL:true,timeout:10,keepAliveInterval:60,onSuccess:function(){ss(true,'\u5df2\u8fde\u63a5 · \u5b9e\u65f6');cl.subscribe(TP,{qos:0});},onFailure:function(){ss(false,'\u8fde\u63a5\u5931\u8d25');}});},3000);};
+cl.onConnectionLost=function(){ss(false,'断开，重连中...');setTimeout(function(){cl.connect({userName:U,password:PW,useSSL:true,timeout:10,keepAliveInterval:60,onSuccess:function(){ss(true,'已连接 · 实时');cl.subscribe(TP,{qos:0});},onFailure:function(){ss(false,'连接失败');}});},3000);};
 cl.onMessageArrived=function(msg){try{var d=JSON.parse(msg.payloadString);ud(d);}catch(e){}};
 function ud(d){
-var t=parseInt(d['\u6e29\u5ea6'])||d.temperature||0;E.temp.textContent=t;E.barTemp.style.width=Math.min(100,(t/50)*100)+'%';
-var h=parseInt(d['\u6e7f\u5ea6'])||d.humidity||0;E.humi.textContent=h;E.barHumi.style.width=h+'%';
-var l=parseInt(d['\u5149\u7167'])||d.light||0;E.light.textContent=l;E.barLight.style.width=Math.min(100,(l/1000)*100)+'%';
-var s=parseInt(d['\u571f\u58e4'])||d.soil||0;E.soil.textContent=s;E.barSoil.style.width=s+'%';
-var ds=d['\u75c5\u5bb3']||d.disease||'',cf=parseInt(d['\u7f6e\u4fe1\u5ea6'])||d.confidence||0,di=DM[ds]||{n:ds||'--',c:'ok',i:'🔬'};
-E.dName.textContent=di.n;E.dConf.textContent=cf>0?'\u7f6e\u4fe1\u5ea6: '+cf+'%':'';E.dIcon.textContent=di.i;E.dBadge.textContent=cf>0?cf+'%':'--';E.dBadge.className='db '+di.c;E.dCard.className='dcard'+(di.c==='bad'?' pulse':'');
-var m=d['\u6a21\u5f0f']||d.mode||'--';E.mode.textContent=m;
-var st=d['\u72b6\u6001']||d.status||'--';E.status.textContent=st;E.status.style.color=(st==='\u6b63\u5e38')?'#4ade80':'#fbbf24';
+var t=parseInt(d['温度'])||d.temperature||0;E.temp.textContent=t;E.barTemp.style.width=Math.min(100,(t/50)*100)+'%';
+var h=parseInt(d['湿度'])||d.humidity||0;E.humi.textContent=h;E.barHumi.style.width=h+'%';
+var l=parseInt(d['光照'])||d.light||0;E.light.textContent=l;E.barLight.style.width=Math.min(100,(l/1000)*100)+'%';
+var s=parseInt(d['土壤'])||d.soil||0;E.soil.textContent=s;E.barSoil.style.width=s+'%';
+var ds=d['病害']||d.disease||'',cf=parseInt(d['置信度'])||d.confidence||0,di=DM[ds]||{n:ds||'--',c:'ok',i:'🔬'};
+E.dName.textContent=di.n;E.dConf.textContent=cf>0?'置信度: '+cf+'%':'';E.dIcon.textContent=di.i;E.dBadge.textContent=cf>0?cf+'%':'--';E.dBadge.className='db '+di.c;E.dCard.className='dcard'+(di.c==='bad'?' pulse':'');
+var m=d['模式']||d.mode||'--';E.mode.textContent=m;
+var st=d['状态']||d.status||'--';E.status.textContent=st;E.status.style.color=(st==='正常')?'#4ade80':'#fbbf24';
 }
-ss(false,'\u8fde\u63a5\u4e2d...');
-cl.connect({userName:U,password:PW,useSSL:true,timeout:10,keepAliveInterval:60,onSuccess:function(){ss(true,'\u5df2\u8fde\u63a5 · \u5b9e\u65f6');cl.subscribe(TP,{qos:0});},onFailure:function(){ss(false,'\u8fde\u63a5\u5931\u8d25');}});
+ss(false,'连接中...');
+cl.connect({userName:U,password:PW,useSSL:true,timeout:10,keepAliveInterval:60,onSuccess:function(){ss(true,'已连接 · 实时');cl.subscribe(TP,{qos:0});},onFailure:function(){ss(false,'连接失败');}});
 })();
 </script>
 </body>
