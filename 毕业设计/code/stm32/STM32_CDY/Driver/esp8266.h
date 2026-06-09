@@ -38,6 +38,7 @@ void ESP8266_SendData(const char *data, uint16_t len);
 uint8_t ESP8266_ConnectWiFi(void);
 uint8_t ESP8266_ConnectMQTT(void);
 uint8_t ESP8266_PublishData(const char *json_str);
+uint8_t ESP8266_CheckCommand(char *payload, uint16_t max_len);
 
 void ESP8266_UART3_IRQHandler(void);
 

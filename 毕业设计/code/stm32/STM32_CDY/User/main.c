@@ -541,6 +541,30 @@ void ESP8266_Task(void)
             status_name, mode_name);
     }
     
+    // 沶取 MQTT 下行命令
+    {
+        char mqtt_cmd[16];
+        if (ESP8266_CheckCommand(mqtt_cmd, sizeof(mqtt_cmd)))
+        {
+            printf("[MQTT命令] 收到: %s (長度=%d)\r\n", mqtt_cmd, strlen(mqtt_cmd));
+            uint8_t c = mqtt_cmd[0];
+            if (c == '1') { Control_Mode = 0; printf(">> [MQTT] 切换自动时晶\r\n"); }
+            else if (c == '3') { Page_Index = 1; OLED_Clear(); printf(">> [MQTT] 显示�?页\r\n"); }
+            else if (c == '4') { Page_Index = 2; OLED_Clear(); printf(">> [MQTT] 显示�?页\r\n"); }
+            else if (c == '6') { Relay_SetState(1, 1); printf(">> [MQTT] 风机打开\r\n"); }
+            else if (c == '7') { Relay_SetState(1, 0); printf(">> [MQTT] 风机关闭\r\n"); }
+            else if (c == '8') { Relay_SetState(2, 1); printf(">> [MQTT] 水阀打开\r\n"); }
+            else if (c == '9') { Relay_SetState(2, 0); printf(">> [MQTT] 水阀关闭\r\n"); }
+            else if (c == 'a' || c == 'A') { Relay_SetState(3, 1); printf(">> [MQTT] 補光灯打开\r\n"); }
+            else if (c == 'b' || c == 'B') { Relay_SetState(3, 0); printf(">> [MQTT] 補光灯关闭\r\n"); }
+            else if (c == 'p' || c == 'P') { Page_Index = (Page_Index + 1) % 3; OLED_Clear(); printf(">> [MQTT] 循环切换页面�?%d\r\n", Page_Index); }
+            else if (c == '+') { Page_Index = (Page_Index + 1) % 3; OLED_Clear(); printf(">> [MQTT] 下一页面 %d\r\n", Page_Index); }
+            else if (c == '-') { Page_Index = (Page_Index == 0) ? 2 : (Page_Index - 1); OLED_Clear(); printf(">> [MQTT] 上一页面 %d\r\n", Page_Index); }
+            else { printf(">> [MQTT] 未知命令: 0x%02X ('%c')\r\n", c, (c >= 32 && c < 127) ? c : '?'); }
+        }
+    }
+
+
     if (ESP8266_PublishData(json))
     {
         printf("[ESP8266_Task] �����ϱ��ɹ�\r\n");

@@ -127,7 +127,7 @@ uint8_t ESP8266_ConnectWiFi(void)
 {
     char cmd[128];
     printf("[ESP8266] WiFi: %s ...\r\n", WIFI_SSID);
-    // ÏÈ¶Ï¿ª¿ÉÄÜ´æÔÚµÄ¾ÉÁ¬½Ó£¬±ÜÃâ×´Ì¬³åÍ»
+    // ï¿½È¶Ï¿ï¿½ï¿½ï¿½ï¿½Ü´ï¿½ï¿½ÚµÄ¾ï¿½ï¿½ï¿½ï¿½Ó£ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½Í»
     ESP8266_SendCmd("AT+CWQAP", "OK", 3000);
     snprintf(cmd, sizeof(cmd), "AT+CWJAP=\"%s\",\"%s\"", WIFI_SSID, WIFI_PASSWORD);
     if (!ESP8266_SendCmd(cmd, "WIFI GOT IP", 15000))
@@ -168,6 +168,15 @@ uint8_t ESP8266_ConnectMQTT(void)
     }
     mqtt_connected = 1;
     printf("[ESP8266] MQTT Connected!\r\n");
+    // è®¢é˜…æ¶ˆæ¯æ¥æ”¶é€šé“ï¼ˆä¸ä½¿ç”¨ MQTTAUTOCPLï¼Œæ”¹ä¸ºä¸»åŠ¨è½®è¯?ï¼?
+    {
+        char sub_cmd[128];
+        snprintf(sub_cmd, sizeof(sub_cmd), "AT+MQTTSUB=0,\"%s\",1", EMQX_SUB_TOPIC);
+        if (ESP8266_SendCmd(sub_cmd, "OK", 3000))
+            printf("[ESP8266] å·²è?¢é˜…: %s\r\n", EMQX_SUB_TOPIC);
+        else
+            printf("[ESP8266] è®¢é˜…å¤±è´¥\r\n");
+    }
     return 1;
 }
 
@@ -185,6 +194,55 @@ uint8_t ESP8266_PublishData(const char *json_str)
     }
     ESP8266_SendRaw(json_str, json_len);
     return ESP8266_WaitResponse("OK", 5000);
+}
+
+// ================== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿? MQTT ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ==================
+// ï¿½ï¿½ï¿½ï¿½Öµ: 1=ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½, 0=ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// payload ï¿½ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿?
+// ================== ï¿½ï¿½ï¿? MQTT ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½î£¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½==================
+uint8_t ESP8266_CheckCommand(char *payload, uint16_t max_len)
+{
+    uint16_t idx = 0;
+    uint16_t t;
+    char line[256];
+
+    if (rx_tail == rx_head) return 0;
+
+    t = rx_tail;
+    while (t != rx_head && idx < 254)
+    {
+        line[idx] = (char)rx_buf[t];
+        t = (t + 1) % ESP8266_RX_BUF_SIZE;
+        if (line[idx] == '\n') { idx++; break; }
+        idx++;
+    }
+    line[idx] = '\0';
+
+    char *p = strstr(line, "+MQTTSUBRECV:");
+    if (p == NULL) { rx_tail = t; return 0; }
+
+    char *last_comma = p;
+    while (strchr(last_comma + 1, ',')) last_comma = strchr(last_comma + 1, ',');
+    if (last_comma == p) { rx_tail = t; return 0; }
+
+    char *payload_start = last_comma + 1;
+    uint16_t plen = 0;
+    while (*payload_start && *payload_start != '\r' && *payload_start != '\n' && plen < max_len - 1)
+    {
+        payload[plen++] = *payload_start++;
+    }
+    payload[plen] = '\0';
+
+    if (plen >= 2 && payload[0] == '"' && payload[plen - 1] == '"')
+    {
+        uint16_t j;
+        for (j = 0; j < plen - 2; j++)
+            payload[j] = payload[j + 1];
+        payload[plen - 2] = '\0';
+    }
+
+    rx_tail = t;
+    return (plen > 0) ? 1 : 0;
 }
 
 uint8_t ESP8266_IsConnected(void) { return wifi_connected && mqtt_connected; }

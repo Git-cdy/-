@@ -614,6 +614,16 @@
               <FileType>1</FileType>
               <FilePath>.\Driver\uart_frame.c</FilePath>
             </File>
+            <File>
+              <FileName>esp8266.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Driver\esp8266.c</FilePath>
+            </File>
+            <File>
+              <FileName>k210_comm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Driver\k210_comm.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
