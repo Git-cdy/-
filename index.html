@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>\u667a\u6167\u5927\u68da</title>
+<style>
+:root{--bg:#0a1a0f;--card:rgba(18,42,28,0.85);--g:#4ade80;--a:#fbbf24;--r:#f87171;--b:#60a5fa;--t:#d1d5db;--td:#9ca3af;--br:rgba(74,222,128,0.15)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--t);min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 80% 60% at 20% 20%,rgba(74,222,128,0.06) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 70%,rgba(251,191,36,0.04) 0%,transparent 60%)}
+.app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:16px}
+.header{text-align:center;padding:20px 0 12px;animation:fadeDown .8s ease-out}
+.header .icon{font-size:40px;margin-bottom:6px;display:block}
+.header h1{font-size:22px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,var(--g),#a3e635);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header .sub{font-size:12px;color:var(--td);margin-top:4px}
+.sbar{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 16px;margin-bottom:16px;border-radius:20px;font-size:12px;font-weight:600;background:var(--card);border:1px solid var(--br);backdrop-filter:blur(12px);animation:fadeDown .8s ease-out .1s both}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--td);transition:background .3s}
+.sdot.on{background:var(--g);box-shadow:0 0 10px var(--g)}
+.sdot.off{background:var(--r)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--br);border-radius:18px;padding:18px 16px;backdrop-filter:blur(12px);transition:transform .2s;animation:fadeUp .6s ease-out both}
+.card:nth-child(1){animation-delay:.15s}
+.card:nth-child(2){animation-delay:.25s}
+.card:nth-child(3){animation-delay:.35s}
+.card:nth-child(4){animation-delay:.45s}
+.card:active{transform:scale(.97)}
+.card .ci{font-size:24px;margin-bottom:8px;display:block}
+.card .cl{font-size:11px;color:var(--td);text-transform:uppercase;letter-spacing:1px}
+.card .cv{font-size:32px;font-weight:700;margin:4px 0;line-height:1}
+.card .cu{font-size:13px;font-weight:400;color:var(--td)}
+.cbar{height:4px;border-radius:2px;margin-top:10px;background:rgba(255,255,255,.06);overflow:hidden}
+.cbf{height:100%;border-radius:2px;transition:width .6s ease-out}
+.cbf.temp{background:linear-gradient(90deg,var(--a),var(--r))}
+.cbf.humi{background:linear-gradient(90deg,var(--b),#818cf8)}
+.cbf.lux{background:linear-gradient(90deg,var(--a),#fde68a)}
+.cbf.soil{background:linear-gradient(90deg,#a78bfa,var(--b))}
+.dcard{background:var(--card);border:1px solid var(--br);border-radius:18px;padding:18px 20px;margin-bottom:12px;backdrop-filter:blur(12px);display:flex;align-items:center;gap:14px;animation:fadeUp .6s ease-out .55s both}
+.di{font-size:36px}
+.dinfo{flex:1}
+.dn{font-size:16px;font-weight:700}
+.dc{font-size:12px;color:var(--td);margin-top:2px}
+.db{padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600}
+.db.ok{background:rgba(74,222,128,.15);color:var(--g)}
+.db.warn{background:rgba(251,191,36,.15);color:var(--a)}
+.db.bad{background:rgba(248,113,113,.15);color:var(--r)}
+.srow{display:flex;gap:12px;margin-bottom:12px;animation:fadeUp .6s ease-out .65s both}
+.chip{flex:1;text-align:center;padding:10px;border-radius:14px;font-size:13px;font-weight:600;background:var(--card);border:1px solid var(--br);backdrop-filter:blur(12px)}
+.chip .chl{font-size:10px;color:var(--td);margin-bottom:2px}
+.foot{text-align:center;padding:12px;font-size:11px;color:var(--td);animation:fadeUp .6s ease-out .75s both}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(248,113,113,.4)}70%{box-shadow:0 0 0 10px rgba(248,113,113,0)}100%{box-shadow:0 0 0 0 rgba(248,113,113,0)}}
+.pulse{animation:pulse 2s infinite}
+@keyframes blink{50%{opacity:.3}}
+.live{animation:blink 1.5s infinite}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="header"><span class="icon">🌿</span><h1>\u667a\u6167\u5927\u68da\u76d1\u6d4b</h1><div class="sub" id="timeDisplay">--</div></div>
+<div class="sbar"><span class="sdot" id="statusDot"></span><span id="statusText">\u8fde\u63a5\u4e2d...</span><span class="live" style="color:var(--g);font-size:10px;display:none" id="liveIndicator">● LIVE</span></div>
+<div class="grid">
+<div class="card"><span class="ci">🌡️</span><div class="cl">\u6e29\u5ea6</div><div class="cv" style="color:#fbbf24" id="valTemp">--</div><div class="cu">°C</div><div class="cbar"><div class="cbf temp" id="barTemp" style="width:0%"></div></div></div>
+<div class="card"><span class="ci">💧</span><div class="cl">\u6e7f\u5ea6</div><div class="cv" style="color:#60a5fa" id="valHumi">--</div><div class="cu">%</div><div class="cbar"><div class="cbf humi" id="barHumi" style="width:0%"></div></div></div>
+<div class="card"><span class="ci">☀️</span><div class="cl">\u5149\u7167</div><div class="cv" style="color:#fbbf24" id="valLight">--</div><div class="cu">lux</div><div class="cbar"><div class="cbf lux" id="barLight" style="width:0%"></div></div></div>
+<div class="card"><span class="ci">🌱</span><div class="cl">\u571f\u58e4\u6e7f\u5ea6</div><div class="cv" style="color:#a78bfa" id="valSoil">--</div><div class="cu">%</div><div class="cbar"><div class="cbf soil" id="barSoil" style="width:0%"></div></div></div>
+</div>
+<div class="dcard" id="diseaseCard"><span class="di" id="diseaseIcon">🔬</span><div class="dinfo"><div class="dn" id="diseaseName">\u7b49\u5f85\u6570\u636e...</div><div class="dc" id="diseaseConf"></div></div><span class="db ok" id="diseaseBadge">--</span></div>
+<div class="srow"><div class="chip"><div class="chl">\u63a7\u5236\u6a21\u5f0f</div><div id="chipMode" style="color:#4ade80">--</div></div><div class="chip"><div class="chl">\u7cfb\u7edf\u72b6\u6001</div><div id="chipStatus" style="color:#4ade80">--</div></div></div>
+<div class="foot">EMQX Cloud · \u68a7\u5dde\u5b66\u9662 23\u901a\u4fe1\u5de5\u7a0b \u9648\u5fb7\u6e90</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<script>
+(function(){
+var B='b3ae3f1a.ala.cn-shenzhen.emqxsl.cn',P=8084,PT='/mqtt',U='cdy',PW='20050416oK',TP='greenhouse/sensor',CI='web_'+Math.random().toString(16).slice(2,10);
+var DM={};
+DM['\u65e9\u75ab\u75c5']={n:'\u65e9\u75ab\u75c5',c:'bad',i:'🦠'};
+DM['\u665a\u75ab\u75c5']={n:'\u665a\u75ab\u75c5',c:'bad',i:'🦠'};
+DM['\u53f6\u6591\u75c5']={n:'\u53f6\u6591\u75c5',c:'warn',i:'🍂'};
+DM['\u5065\u5eb7']={n:'\u5065\u5eb7',c:'ok',i:'✅'};
+DM['\u672a\u77e5']={n:'\u672a\u77e5',c:'warn',i:'❓'};
+function $(id){return document.getElementById(id);}
+var E={time:$('timeDisplay'),dot:$('statusDot'),text:$('statusText'),live:$('liveIndicator'),temp:$('valTemp'),humi:$('valHumi'),light:$('valLight'),soil:$('valSoil'),barTemp:$('barTemp'),barHumi:$('barHumi'),barLight:$('barLight'),barSoil:$('barSoil'),dName:$('diseaseName'),dConf:$('diseaseConf'),dIcon:$('diseaseIcon'),dBadge:$('diseaseBadge'),dCard:$('diseaseCard'),mode:$('chipMode'),status:$('chipStatus')};
+function ut(){var d=new Date();E.time.textContent=d.toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});}
+ut();setInterval(ut,1000);
+function ss(on,msg){E.dot.className='sdot '+(on?'on':'off');E.text.textContent=msg;E.live.style.display=on?'inline':'none';}
+var cl=new Paho.MQTT.Client(B,P,PT,CI);
+cl.onConnectionLost=function(){ss(false,'\u65ad\u5f00\uff0c\u91cd\u8fde\u4e2d...');setTimeout(function(){cl.connect({userName:U,password:PW,useSSL:true,timeout:10,keepAliveInterval:60,onSuccess:function(){ss(true,'\u5df2\u8fde\u63a5 · \u5b9e\u65f6');cl.subscribe(TP,{qos:0});},onFailure:function(){ss(false,'\u8fde\u63a5\u5931\u8d25');}});},3000);};
+cl.onMessageArrived=function(msg){try{var d=JSON.parse(msg.payloadString);ud(d);}catch(e){}};
+function ud(d){
+var t=parseInt(d['\u6e29\u5ea6'])||d.temperature||0;E.temp.textContent=t;E.barTemp.style.width=Math.min(100,(t/50)*100)+'%';
+var h=parseInt(d['\u6e7f\u5ea6'])||d.humidity||0;E.humi.textContent=h;E.barHumi.style.width=h+'%';
+var l=parseInt(d['\u5149\u7167'])||d.light||0;E.light.textContent=l;E.barLight.style.width=Math.min(100,(l/1000)*100)+'%';
+var s=parseInt(d['\u571f\u58e4'])||d.soil||0;E.soil.textContent=s;E.barSoil.style.width=s+'%';
+var ds=d['\u75c5\u5bb3']||d.disease||'',cf=parseInt(d['\u7f6e\u4fe1\u5ea6'])||d.confidence||0,di=DM[ds]||{n:ds||'--',c:'ok',i:'🔬'};
+E.dName.textContent=di.n;E.dConf.textContent=cf>0?'\u7f6e\u4fe1\u5ea6: '+cf+'%':'';E.dIcon.textContent=di.i;E.dBadge.textContent=cf>0?cf+'%':'--';E.dBadge.className='db '+di.c;E.dCard.className='dcard'+(di.c==='bad'?' pulse':'');
+var m=d['\u6a21\u5f0f']||d.mode||'--';E.mode.textContent=m;
+var st=d['\u72b6\u6001']||d.status||'--';E.status.textContent=st;E.status.style.color=(st==='\u6b63\u5e38')?'#4ade80':'#fbbf24';
+}
+ss(false,'\u8fde\u63a5\u4e2d...');
+cl.connect({userName:U,password:PW,useSSL:true,timeout:10,keepAliveInterval:60,onSuccess:function(){ss(true,'\u5df2\u8fde\u63a5 · \u5b9e\u65f6');cl.subscribe(TP,{qos:0});},onFailure:function(){ss(false,'\u8fde\u63a5\u5931\u8d25');}});
+})();
+</script>
+</body>
+</html>
